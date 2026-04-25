@@ -262,6 +262,7 @@ O AIOS carrega regras contextuais de `.claude/rules/` automaticamente. Regras co
 | `agent-handoff.md` | Agent switch compaction protocol for context optimization |
 | `agent-memory-imports.md` | Agent memory lifecycle and CLAUDE.md ownership |
 | `coderabbit-integration.md` | Automated code review integration rules |
+| `git-startup-check.md` | Git status verification obrigatória no início de toda sessão |
 | `ids-principles.md` | Incremental Development System principles |
 | `mcp-usage.md` | MCP server usage rules and tool selection priority |
 | `story-lifecycle.md` | Story status transitions and quality gates |
