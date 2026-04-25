@@ -114,6 +114,10 @@ commands:
     visibility: [full, quick, key]
     args: '{epic|story}'
     description: 'STRIDE threat model for an Epic or Story — outputs structured threat report'
+  - name: dep-audit
+    visibility: [full, quick, key]
+    args: '[python|node|all]'
+    description: 'Audit dependencies (Python pip-audit + npm audit) — salva relatório consolidado em docs/qa/security-reports/dep-audit-YYYY-MM-DD.md'
   - name: secrets-check
     visibility: [full, quick, key]
     args: '[path]'
@@ -145,8 +149,10 @@ dependencies:
     - security-threat-model.md
     - security-secrets-check.md
     - security-rls-review.md
+    - security-python-dep-audit.md
   templates:
     - security-audit-report-tmpl.md
+    - security-dep-audit-report-tmpl.md
     - security-remediation-story-tmpl.md
     - story-tmpl.yaml
   checklists:
@@ -193,6 +199,12 @@ autoClaude:
 ---
 
 ## Quick Commands
+
+**Dependency Audit:**
+
+- `*dep-audit` — Python (pip-audit) + npm audit completo — salva relatório em `docs/qa/security-reports/`
+- `*dep-audit python` — Apenas dependências Python (pip-audit)
+- `*dep-audit node` — Apenas dependências npm
 
 **Audits:**
 

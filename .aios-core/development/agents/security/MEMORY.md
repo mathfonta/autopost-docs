@@ -1,5 +1,43 @@
 # Security Agent Memory (Sage)
 
+## Commands
+
+| Comando | Descrição | Task |
+|---------|-----------|------|
+| `*audit [scope]` | OWASP Top 10 full audit | security-audit.md |
+| `*threat-model {epic\|story}` | STRIDE threat model | security-threat-model.md |
+| `*secrets-check [path]` | Scan de secrets expostos | security-secrets-check.md |
+| `*rls-review [table]` | Auditoria RLS Supabase | security-rls-review.md |
+| `*dep-audit [python\|node\|all]` | Auditoria de dependências Python + npm | security-python-dep-audit.md |
+| `*create-remediation {id}` | Criar story de remediação | — |
+| `*status` | Resumo de findings abertos | — |
+
+### *dep-audit — Instruções de Uso
+
+```bash
+# Auditoria completa (Python + Node.js)
+@security *dep-audit
+
+# Somente Python (backend FastAPI)
+@security *dep-audit python
+
+# Somente Node.js (frontend Next.js)
+@security *dep-audit node
+```
+
+**Saída:** `docs/qa/security-reports/dep-audit-YYYY-MM-DD.md`  
+**Template:** `security-dep-audit-report-tmpl.md`  
+**Task Python:** `security-python-dep-audit.md`  
+**CI:** `backend/.github/workflows/security.yml` + `frontend/.github/workflows/security.yml`
+
+**Gate Logic:**
+- CRITICAL → FAIL (bloqueia CI, cria story de remediação)
+- HIGH → CONCERNS (documenta como dívida técnica)
+- MEDIUM/LOW → PASS (registra em MEMORY.md)
+- pip-audit/npm indisponível → SKIPPED (warn, não bloqueia)
+
+---
+
 ## Active Patterns
 
 ### AutoPost Stack — Known Risk Areas (baseline)

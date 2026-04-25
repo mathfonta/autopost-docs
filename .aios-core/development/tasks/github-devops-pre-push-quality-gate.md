@@ -513,13 +513,17 @@ function runSecurityScan(storyId, storyPath, projectRoot) {
   console.log('\n🔒 Running Security Scan (SAST)...\n');
 
   try {
-    // Execute security-scan.md task
-    const securityScanPath = path.join(__dirname, 'security-scan.md');
+    // Detect project type — Step 0 of security-scan.md (Python vs Node.js routing)
+    const isPython = fs.existsSync(path.join(projectRoot, 'requirements.txt')) ||
+                     fs.existsSync(path.join(projectRoot, 'pyproject.toml'));
+    const isNode = fs.existsSync(path.join(projectRoot, 'package.json'));
 
-    // For now, run security checks directly
+    console.log(`🔍 Project type: ${isPython ? 'Python' : isNode ? 'Node.js' : 'unknown'}`);
+
+    // Route to correct dependency scanner based on project type
     const results = {
-      audit: runNpmAudit(projectRoot),
-      eslint: runESLintSecurity(projectRoot),
+      audit: isPython ? runPipAudit(projectRoot) : runNpmAudit(projectRoot),
+      eslint: isNode ? runESLintSecurity(projectRoot) : { gate: 'PASS', skipped: true },
       secrets: runSecretDetection(projectRoot)
     };
 
@@ -567,6 +571,51 @@ function runNpmAudit(projectRoot) {
     }
 
     console.warn('⚠️  npm audit failed - skipping dependency check');
+    return { gate: 'PASS', skipped: true };
+  }
+}
+
+function runPipAudit(projectRoot) {
+  const requirementsPath = path.join(projectRoot, 'requirements.txt');
+  const pyprojectPath = path.join(projectRoot, 'pyproject.toml');
+
+  if (!fs.existsSync(requirementsPath) && !fs.existsSync(pyprojectPath)) {
+    console.log('⚠️  No Python project file found — skipping pip-audit');
+    return { gate: 'PASS', skipped: true };
+  }
+
+  const auditTarget = fs.existsSync(requirementsPath) ? '--requirement requirements.txt' : '';
+
+  // Check pip-audit availability — graceful skip if not installed
+  try {
+    execSync('pip-audit --version', { cwd: projectRoot, stdio: 'pipe' });
+  } catch {
+    console.log('⚠️  pip-audit not available — skipping Python dep scan');
+    console.log('   To install: pip install pip-audit');
+    return { gate: 'PASS', skipped: true };
+  }
+
+  try {
+    execSync(
+      `pip-audit ${auditTarget} --format json --progress-spinner off --output pip-audit-results.json`,
+      { cwd: projectRoot, stdio: 'pipe' }
+    );
+    console.log('✓ pip-audit: No vulnerabilities found');
+    return { gate: 'PASS', critical: 0, high: 0 };
+  } catch (error) {
+    // pip-audit exits 1 when vulnerabilities found — parse results
+    const resultsFile = path.join(projectRoot, 'pip-audit-results.json');
+    if (fs.existsSync(resultsFile)) {
+      const data = JSON.parse(fs.readFileSync(resultsFile, 'utf8'));
+      const vulnCount = data.reduce((acc, dep) => acc + (dep.vulns?.length || 0), 0);
+      console.warn(`⚠️  pip-audit found ${vulnCount} vulnerability(ies)`);
+      return {
+        gate: vulnCount > 0 ? 'CONCERNS' : 'PASS',
+        vulnerabilities: vulnCount,
+        skipped: false
+      };
+    }
+    console.warn('⚠️  pip-audit failed — skipping with warning');
     return { gate: 'PASS', skipped: true };
   }
 }
@@ -748,7 +797,7 @@ Impact Analysis (Advisory):
   ℹ️  Advisory only — does not affect gate status
 
 Security Scan Results:
-  ✓ Dependencies: 0 critical, 0 high, 2 moderate, 5 low
+  ✓ Dependencies (pip-audit/npm): 0 critical, 0 high, 2 moderate, 5 low
   ✓ Code patterns: No security issues
   ✓ Secrets: No secrets detected
 

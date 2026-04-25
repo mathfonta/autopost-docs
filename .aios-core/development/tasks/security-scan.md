@@ -107,6 +107,38 @@ pre-conditions:
 
 ## Step-by-Step Execution
 
+### Step 0: Project Context Detection
+
+**Purpose:** Detectar se o projeto é Node.js/npm ou Python, e rotear para as ferramentas corretas.
+
+**Actions:**
+
+```javascript
+const fs = require('fs');
+const path = require('path');
+
+function detectProjectType(projectRoot) {
+  if (fs.existsSync(path.join(projectRoot, 'requirements.txt'))) return 'python';
+  if (fs.existsSync(path.join(projectRoot, 'pyproject.toml'))) return 'python';
+  if (fs.existsSync(path.join(projectRoot, 'package.json'))) return 'node';
+  return 'unknown';
+}
+
+const projectType = detectProjectType(projectRoot);
+console.log(`🔍 Project type detected: ${projectType}`);
+```
+
+**Routing:**
+- `python` → Pular Step 1 (npm tools), executar Step 2a (pip-audit)
+- `node` → Executar Steps 1-5 (npm audit, ESLint, secretlint)
+- `unknown` → Tentar npm audit como fallback
+
+**Validation:**
+- Project type detectado
+- Rota de scan selecionada
+
+---
+
 ### Step 1: Setup Security Tools
 
 **Purpose:** Ensure all required security scanning tools are installed and configured
@@ -126,7 +158,31 @@ pre-conditions:
 
 ### Step 2: Dependency Vulnerability Scan
 
-**Purpose:** Scan npm dependencies for known vulnerabilities
+**Purpose:** Scan dependencies for known vulnerabilities — roteado por tipo de projeto (Step 0).
+
+#### Step 2a (Python): pip-audit Scan
+
+**Trigger:** `projectType === 'python'`
+
+**Actions:**
+```bash
+# Install pip-audit if not available (graceful)
+pip install pip-audit --quiet 2>/dev/null || echo "WARNING: pip-audit unavailable — skipping Python dep scan"
+
+# Run audit — exit code 1 if vulnerabilities found (expected)
+pip-audit ${AUDIT_TARGET} --format json --progress-spinner off \
+  --output pip-audit-results.json 2>&1 || true
+```
+
+**Fallback:** Se pip-audit indisponível, pular com warning (não bloqueia). Ver task `security-python-dep-audit.md` para detalhes completos.
+
+**Gate Logic:** CRITICAL → FAIL, HIGH → CONCERNS (mesmo que Step 2b)
+
+---
+
+#### Step 2b (Node.js): npm audit Scan
+
+**Trigger:** `projectType === 'node'` ou `unknown`
 
 **Actions:**
 1. Execute `npm audit --audit-level=moderate --json`
@@ -245,9 +301,17 @@ acceptance-criteria:
 
 - npm-audit:
     version: built-in
-    used_for: Dependency vulnerability scanning
+    used_for: Dependency vulnerability scanning (Node.js)
     shared_with: [qa, dev]
     cost: $0
+
+- pip-audit:
+    version: latest (PyPA)
+    install: pip install pip-audit
+    used_for: Dependency vulnerability scanning (Python)
+    shared_with: [qa, dev, security]
+    cost: $0
+    note: See security-python-dep-audit.md for full task definition
 
 - eslint-plugin-security:
     version: ^1.7.1
@@ -322,13 +386,16 @@ token_usage: ~2,000-8,000 tokens
 
 ```yaml
 story: STORY-6.1.7.2
-version: 2.0.0
+version: 2.1.0
 dependencies:
-  - N/A
+  - security-python-dep-audit.md
 tags:
   - security
   - audit
-updated_at: 2025-01-17
+  - python
+  - pip-audit
+updated_at: 2026-04-25
+ids_change: ADAPT (Story 7.2) — Added Python/pip-audit context routing (Steps 0, 2a). Change < 30%.
 ```
 
 ---
@@ -344,8 +411,9 @@ required:
 
 ## Prerequisites
 
-- Node.js e npm instalados
-- Projeto com package.json
+- Node.js e npm instalados (projetos Node.js/npm)
+- Python e pip instalados (projetos Python — pip-audit instalado automaticamente se necessário)
+- Projeto com `package.json` (Node.js) **ou** `requirements.txt`/`pyproject.toml` (Python)
 
 ## Ferramentas (Instaladas Automaticamente)
 
