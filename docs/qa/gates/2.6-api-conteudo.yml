@@ -1,0 +1,12 @@
+schema: 1
+story: '2.6'
+gate: CONCERNS
+status_reason: 'Todos os 7 checks passam, mas AC5 especifica status "rejected" inexistente no enum — rejeição mapeia para "failed" com prefixo no error_message.'
+reviewer: 'Quinn'
+updated: '2026-04-17T11:00:00Z'
+top_issues:
+  - id: 'REQ-001'
+    severity: low
+    finding: 'AC5 especifica transição para status "rejected", mas ContentStatus enum não tem esse valor — reject_content_request usa ContentStatus.failed com error_message "Rejeitado pelo cliente: ..."'
+    suggested_action: 'Adicionar ContentStatus.rejected ao enum e migration, ou atualizar o AC para refletir o comportamento intencional com failed+prefixo'
+waiver: { active: false }

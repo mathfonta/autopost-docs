@@ -1,0 +1,12 @@
+schema: 1
+story: '2.5'
+gate: PASS
+status_reason: 'Todos os 7 checks passam. Sessão Redis com TTL, extração de PROFILE_COMPLETE robusta, auto-restart em sessão expirada implementados corretamente.'
+reviewer: 'Quinn'
+updated: '2026-04-17T11:00:00Z'
+top_issues:
+  - id: 'MNT-001'
+    severity: low
+    finding: 'Histórico de mensagens cresce indefinidamente na sessão Redis. Conversa muito longa (~30+ trocas) pode aproximar o context window do Claude'
+    suggested_action: 'Adicionar limite de mensagens retidas (ex: últimas 20) ou sumarizar histórico antigo antes de enviar ao Claude'
+waiver: { active: false }

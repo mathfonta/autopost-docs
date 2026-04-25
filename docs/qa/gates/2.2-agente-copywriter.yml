@@ -1,0 +1,12 @@
+schema: 1
+story: '2.2'
+gate: PASS
+status_reason: 'Todos os 7 checks passam. Validação de caption, normalização de hashtags e fallback de horário implementados corretamente.'
+reviewer: 'Quinn'
+updated: '2026-04-17T11:00:00Z'
+top_issues:
+  - id: 'MNT-001'
+    severity: low
+    finding: '_DEFAULT_TIMES usa chaves em português minúsculo (ex: "construção civil") mas segment vem do brand_profile sem garantia de normalização — risco de fallback silencioso para "default"'
+    suggested_action: 'Normalizar segment via .lower().strip() antes do lookup, ou centralizar a lista de segmentos em uma constante compartilhada'
+waiver: { active: false }

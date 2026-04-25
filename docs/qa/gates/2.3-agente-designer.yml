@@ -1,0 +1,12 @@
+schema: 1
+story: '2.3'
+gate: CONCERNS
+status_reason: 'Lógica de processamento sólida e testes passando, mas _process_card usa fonte padrão do PIL sem tamanho explícito — texto pode ficar ilegível em produção.'
+reviewer: 'Quinn'
+updated: '2026-04-17T11:00:00Z'
+top_issues:
+  - id: 'MNT-001'
+    severity: low
+    finding: '_process_card usa ImageDraw.text() com font=None (fonte padrão PIL, ~10px). Em cards 1080x1080, o texto fica muito pequeno e praticamente ilegível'
+    suggested_action: 'Carregar uma fonte TrueType via ImageFont.truetype() ou ImageFont.load_default(size=N) com tamanho adequado (ex: 40-60px para título, 32px para corpo)'
+waiver: { active: false }

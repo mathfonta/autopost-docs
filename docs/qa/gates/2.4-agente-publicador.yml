@@ -1,0 +1,8 @@
+schema: 1
+story: '2.4'
+gate: PASS
+status_reason: 'Todos os 7 checks passam. Fluxo 2-etapas Instagram, fallback Facebook, tratamento de token expirado e agendamento de métricas implementados corretamente.'
+reviewer: 'Quinn'
+updated: '2026-04-17T11:00:00Z'
+top_issues: []
+waiver: { active: false }

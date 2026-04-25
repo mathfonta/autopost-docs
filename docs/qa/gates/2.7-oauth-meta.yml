@@ -1,0 +1,12 @@
+schema: 1
+story: '2.7'
+gate: CONCERNS
+status_reason: 'Fluxo OAuth correto com CSRF via JWT, mas chamadas httpx em meta_oauth.py não definem timeout — risco de hang se Meta API não responder.'
+reviewer: 'Quinn'
+updated: '2026-04-17T11:00:00Z'
+top_issues:
+  - id: 'REL-001'
+    severity: low
+    finding: 'exchange_code_for_short_token e exchange_for_long_lived_token usam httpx.AsyncClient() sem timeout. Se Meta API estiver lenta, a requisição pode travar indefinidamente'
+    suggested_action: 'Adicionar timeout=30.0 em todos os AsyncClient() calls em meta_oauth.py, igual ao padrão usado em publisher.py'
+waiver: { active: false }

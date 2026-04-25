@@ -1,0 +1,8 @@
+schema: 1
+story: '2.1'
+gate: PASS
+status_reason: 'Todos os 7 checks passam. Código limpo, 140/140 testes, ACs implementados, timeout e token limit dentro das specs.'
+reviewer: 'Quinn'
+updated: '2026-04-17T11:00:00Z'
+top_issues: []
+waiver: { active: false }
