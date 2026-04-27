@@ -18,7 +18,7 @@ implementação ou análise pode ocorrer antes desta leitura.**
 2. Leia `G:\Meu Drive\OBSidian\AutoPost\🧠 Cerebro\APRENDIZADOS.md`
    → Absorva erros já cometidos, soluções encontradas, padrões descobertos
 
-3. Leia `G:\Meu Drive\OBSidian\AutoPost\💡 Ideas.md`
+3. Leia `G:\Meu Drive\OBSidian\AutoPost\💡 Ideas\Novas.md`
    → Verifique se Matheus inseriu novas ideias desde a última sessão
 
 4. Execute o **Git Startup Check** (`.claude/rules/git-startup-check.md`):
@@ -73,7 +73,7 @@ O Cérebro cresce com o projeto. Registre sempre que:
 - Mudou direção do projeto
 - Desbloqueou algo que estava impedindo progresso
 
-**→ Ideas.md**
+**→ Ideas/Novas.md**
 - Matheus ou qualquer agente AIOS pode sugerir ideias aqui
 - Não filtre — registre mesmo que pareça pequeno
 

@@ -1,0 +1,66 @@
+storyId: "5.4"
+storyTitle: "Status Rejeitado Dedicado + Editor de Legenda na Página de Detalhe"
+verdict: CONCERNS
+qaAgent: "@qa (Quinn)"
+date: "2026-04-26"
+
+checks:
+  - id: code_review
+    result: PASS
+    notes: >
+      PostCard.tsx lógica clara — failed/rejected tratados em blocos separados do placeholder.
+      StatusBadge.tsx Record<ContentStatus,...> exaustivo — rejected adicionado corretamente.
+      posts/[id]/page.tsx estado local para caption editing segue padrão do PostCard.
+
+  - id: migration_safety
+    result: PASS
+    notes: >
+      ALTER TYPE ... ADD VALUE IF NOT EXISTS é idempotente.
+      down_revision correto (d1e2f3a4b5c6).
+      Sem migração de dados necessária — retrocompatível com posts antigos em status failed.
+
+  - id: acceptance_criteria
+    result: PASS
+    notes: "AC1–AC8 todos verificados no código."
+
+  - id: no_regressions
+    result: PASS
+    notes: >
+      StatusBadge: TypeScript enforça Record<ContentStatus,...> — sem keys faltando.
+      RejectModal + API: motivo fluye corretamente até error_message no DB.
+      Posts antigos rejeitados (status=failed) continuam mostrando "Falhou" — sem quebra.
+      Polling da detail page agora para também em rejected (além de published/failed).
+
+  - id: performance
+    result: PASS
+    notes: "Nenhuma nova chamada de API. CaptionEditor usa PATCH existente."
+
+  - id: security
+    result: PASS
+    notes: >
+      error_message renderizado via JSX (React auto-escape) — sem risco XSS.
+      Motivo de rejeição é texto livre do usuário, exibido sem innerHTML.
+
+  - id: documentation
+    result: PASS
+    notes: "Story 5.4 criada com ACs, escopo, riscos e change log."
+
+issues:
+  - severity: low
+    category: code
+    description: >
+      posts/[id]/page.tsx: constante TERMINAL definida dentro do callback de useEffect.
+      Recomendado mover para fora do componente para clareza, mas não afeta comportamento.
+    recommendation: "Extrair para const TERMINAL_STATUSES = [...] fora do componente."
+
+  - severity: low
+    category: code
+    description: >
+      posts/[id]/page.tsx: useState<string | null>(null) para editedCaption e
+      useState(false) para captionEdited são inicializados antes do fetchPost retornar.
+      Não causa bug — componente não renderiza até post ser carregado.
+    recommendation: "Sem ação necessária — comportamento correto."
+
+summary: >
+  Implementação correta e completa. Dois issues LOW identificados, ambos cosméticos sem impacto em runtime.
+  Aprovado para push via @devops.
