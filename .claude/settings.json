@@ -1,5 +1,4 @@
 {
-  "language": "portuguese",
   "permissions": {
     "allow": [
       "Read",
@@ -47,6 +46,10 @@
       "Bash(supabase migration*)",
       "Bash(DROP TABLE*)",
       "Bash(DELETE FROM*)"
+    ],
+    "additionalDirectories": [
+      "G:\\Meu Drive\\OBSidian\\AutoPost"
     ]
-  }
+  },
+  "language": "portuguese"
 }

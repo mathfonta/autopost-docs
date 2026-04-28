@@ -68,6 +68,8 @@
 
 <!-- Formato: - YYYY-MM-DD | Tipo | Score | Findings (C/H/M/L) | Report -->
 - 2026-04-25 | Secrets Check (Smoke Test) | CLEAN | 0C 0H 1M 0L | security-secrets-check-2026-04-25.md
+- 2026-04-25 | Dep Audit — Python (pip-audit 2.10.0) | PASS | 0C 0H 0M 0L | dep-audit-2026-04-25.md
+- 2026-04-26 | Dep Audit — Node.js (npm audit 10.8.2) | PASS | 0C 0H 2M 0L | dep-audit-2026-04-26.md
 
 ## Recurring Findings
 <!-- Vulnerabilidades que reaparecem entre auditorias — sinal de débito sistêmico -->

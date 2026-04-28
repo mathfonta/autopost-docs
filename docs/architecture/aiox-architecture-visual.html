@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIOX Architecture — Como tudo se conecta</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1f2937;
+    --border: #374151;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --cyan: #06b6d4;
+    --pink: #ec4899;
+    --text: #f9fafb;
+    --text2: #9ca3af;
+    --text3: #6b7280;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: rgba(10,14,26,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex; align-items: center; gap: 0.5rem;
+    z-index: 100;
+    overflow-x: auto;
+  }
+
+  .nav-btn {
+    background: none; border: none; color: var(--text2);
+    padding: 0.4rem 0.8rem; border-radius: 6px;
+    cursor: pointer; font-size: 0.8rem; white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: var(--accent); color: white; }
+
+  .nav-logo {
+    font-weight: 700; font-size: 1rem; color: var(--accent);
+    margin-right: 1rem; white-space: nowrap;
+  }
+
+  /* SECTIONS */
+  .section {
+    display: none;
+    min-height: 100vh;
+    padding: 80px 2rem 4rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .section.active { display: block; }
+
+  h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; margin-bottom: 0.75rem; color: var(--accent); }
+  h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text2); }
+  p { color: var(--text2); margin-bottom: 1rem; }
+  .lead { font-size: 1.1rem; color: var(--text); margin-bottom: 2rem; }
+  .tag { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+
+  /* REPO DIAGRAM */
+  .repo-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    margin: 2rem 0;
+  }
+
+  .repo-box {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+  .repo-box:hover { border-color: var(--accent); }
+
+  .repo-box.aiox { border-color: var(--accent); background: linear-gradient(135deg, #111827, #1a1040); }
+  .repo-box.backend { border-color: var(--green); background: linear-gradient(135deg, #111827, #0a2010); }
+  .repo-box.frontend { border-color: var(--blue); background: linear-gradient(135deg, #111827, #0a1020); }
+
+  .repo-badge {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 0.2rem 0.5rem;
+    border-radius: 4px; margin-bottom: 0.75rem; display: inline-block;
+  }
+
+  .file-tree { font-family: 'Courier New', monospace; font-size: 0.8rem; }
+  .file-tree .dir { color: var(--accent); }
+  .file-tree .file { color: var(--text2); }
+  .file-tree .highlight { color: var(--yellow); }
+  .file-tree li { list-style: none; padding: 0.15rem 0; }
+  .file-tree .indent1 { padding-left: 1rem; }
+  .file-tree .indent2 { padding-left: 2rem; }
+  .file-tree .indent3 { padding-left: 3rem; }
+
+  /* ARROWS */
+  .arrow-container {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; color: var(--text3); padding: 0 0.5rem;
+  }
+
+  /* LAYERS DIAGRAM */
+  .layers {
+    display: flex; flex-direction: column; gap: 0.5rem; margin: 1.5rem 0;
+  }
+  .layer {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .layer-l1 { background: rgba(239,68,68,0.1); border-color: var(--red); }
+  .layer-l2 { background: rgba(245,158,11,0.1); border-color: var(--yellow); }
+  .layer-l3 { background: rgba(99,102,241,0.1); border-color: var(--accent); }
+  .layer-l4 { background: rgba(16,185,129,0.1); border-color: var(--green); }
+
+  .layer-info { flex: 1; }
+  .layer-badge { font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; white-space: nowrap; }
+
+  /* AGENTS */
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .agent-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .agent-icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
+  .agent-name { font-weight: 700; font-size: 0.9rem; }
+  .agent-persona { font-size: 0.75rem; color: var(--text3); }
+  .agent-role { font-size: 0.75rem; color: var(--text2); margin-top: 0.3rem; }
+
+  /* CYCLE DIAGRAM */
+  .cycle-diagram {
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+    margin: 2rem auto;
+  }
+
+  .cycle-steps {
+    display: flex; flex-direction: column; gap: 0;
+  }
+
+  .cycle-step {
+    display: flex; align-items: flex-start; gap: 1rem;
+    position: relative;
+  }
+
+  .cycle-step::before {
+    content: '';
+    position: absolute;
+    left: 19px; top: 40px;
+    width: 2px; height: calc(100% + 0px);
+    background: linear-gradient(to bottom, var(--accent), transparent);
+  }
+  .cycle-step:last-child::before { display: none; }
+
+  .cycle-num {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1rem;
+    flex-shrink: 0; z-index: 1;
+  }
+
+  .cycle-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    flex: 1;
+  }
+
+  .cycle-title { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; }
+  .cycle-desc { font-size: 0.85rem; color: var(--text2); }
+  .cycle-files { font-size: 0.75rem; color: var(--accent); font-family: monospace; margin-top: 0.5rem; }
+
+  /* NEW PROJECT SECTION */
+  .project-flow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0;
+    margin: 2rem 0;
+    align-items: center;
+  }
+
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+  }
+
+  .flow-arrow {
+    text-align: center; font-size: 1.4rem; color: var(--text3);
+    padding: 0.5rem 0;
+  }
+
+  /* COMPARISON TABLE */
+  .compare-table {
+    width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1.5rem 0;
+  }
+  .compare-table th {
+    background: var(--surface2); padding: 0.75rem 1rem;
+    text-align: left; color: var(--accent); font-weight: 600;
+    border-bottom: 2px solid var(--border);
+  }
+  .compare-table td {
+    padding: 0.6rem 1rem; border-bottom: 1px solid var(--border);
+    color: var(--text2); vertical-align: top;
+  }
+  .compare-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+  /* HIGHLIGHT BOX */
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1));
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin: 1.5rem 0;
+  }
+
+  .info-box {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid var(--green);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+
+  .warn-box {
+    background: rgba(245,158,11,0.1);
+    border: 1px solid var(--yellow);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+
+  /* BRAIN DIAGRAM */
+  .brain-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .brain-box {
+    border-radius: 10px;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+  }
+
+  .brain-local { background: rgba(59,130,246,0.1); border-color: var(--blue); }
+  .brain-global { background: rgba(139,92,246,0.1); border-color: var(--accent2); }
+
+  /* BADGE COLORS */
+  .bg-red { background: rgba(239,68,68,0.2); color: #fca5a5; }
+  .bg-yellow { background: rgba(245,158,11,0.2); color: #fcd34d; }
+  .bg-purple { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+  .bg-green { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+  .bg-blue { background: rgba(59,130,246,0.2); color: #93c5fd; }
+
+  /* PROGRESS INDICATOR */
+  .progress-bar {
+    height: 3px; background: var(--border);
+    position: fixed; top: 56px; left: 0; right: 0; z-index: 99;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(to right, var(--accent), var(--pink));
+    transition: width 0.3s;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .section-num {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .repo-container { grid-template-columns: 1fr; }
+    .brain-grid { grid-template-columns: 1fr; }
+    .project-flow { grid-template-columns: 1fr; }
+    h1 { font-size: 1.5rem; }
+  }
+
+  /* ANIMATION */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .section.active { animation: fadeIn 0.3s ease; }
+
+  .pulse { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* CI/CD FLOW */
+  .cicd-flow {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap; margin: 1rem 0;
+  }
+  .cicd-step {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.6rem 1rem;
+    font-size: 0.8rem; text-align: center;
+  }
+  .cicd-arrow { color: var(--text3); font-size: 1.2rem; }
+  .cicd-step.pass { border-color: var(--green); }
+  .cicd-step.fail { border-color: var(--red); }
+  .cicd-step.warn { border-color: var(--yellow); }
+
+</style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="progress-fill" id="progress" style="width:14%"></div></div>
+
+<nav class="nav">
+  <span class="nav-logo">⚡ AIOX</span>
+  <button class="nav-btn active" onclick="showSection(0)">🏠 Visão Geral</button>
+  <button class="nav-btn" onclick="showSection(1)">📦 3 Repositórios</button>
+  <button class="nav-btn" onclick="showSection(2)">🧩 Dentro do AIOX</button>
+  <button class="nav-btn" onclick="showSection(3)">🤖 Agentes</button>
+  <button class="nav-btn" onclick="showSection(4)">🧠 Segundo Cérebro</button>
+  <button class="nav-btn" onclick="showSection(5)">🔄 Aprendizado Cíclico</button>
+  <button class="nav-btn" onclick="showSection(6)">🚀 Novos Projetos</button>
+</nav>
+
+<!-- ===== SECTION 0: VISÃO GERAL ===== -->
+<section class="section active" id="s0">
+  <div class="section-title">
+    <div class="section-num">1</div>
+    <h1>Como tudo se conecta</h1>
+  </div>
+  <p class="lead">Uma visão geral de como o AIOX funciona — para entender antes de mergulhar nos detalhes.</p>
+
+  <div class="highlight-box">
+    <h2 style="margin-bottom:0.5rem">🎯 O que é o AIOX?</h2>
+    <p style="margin:0">AIOX é um <strong style="color:white">sistema operacional de desenvolvimento com IA</strong>. Em vez de usar Claude/GPT como um chatbot genérico, o AIOX organiza agentes especializados (Dev, QA, Security, DevOps...) que trabalham juntos em histórias, aprendem com os erros e carregam esse conhecimento para o próximo projeto.</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>📦 3 Repositórios</h3>
+      <p>AutoPost tem 3 repos no GitHub: o <strong style="color:white">AIOX</strong> (framework), o <strong style="color:white">Backend</strong> (Python/FastAPI) e o <strong style="color:white">Frontend</strong> (Next.js). Cada um com seu propósito.</p>
+    </div>
+    <div class="card">
+      <h3>🤖 13 Agentes Especializados</h3>
+      <p>Cada agente tem um papel: @dev implementa, @qa revisa, @security audita, @devops faz deploy. Cada um com memória e comandos próprios.</p>
+    </div>
+    <div class="card">
+      <h3>🧠 Memória Persistente</h3>
+      <p>O sistema aprende e <strong style="color:white">nunca esquece</strong>. Erros, decisões e padrões ficam no Segundo Cérebro e alimentam o próximo projeto automaticamente.</p>
+    </div>
+    <div class="card">
+      <h3>🔄 Reutilização (IDS)</h3>
+      <p>Antes de criar qualquer coisa nova, o sistema verifica se já existe. <strong style="color:white">REUSE → ADAPT → CREATE</strong>. Evita reinventar a roda entre projetos.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:2rem; padding: 1.5rem; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
+    <h2>🗺️ O Grande Mapa</h2>
+    <div style="margin-top:1rem; font-family: monospace; font-size:0.85rem; line-height:2;">
+      <div style="display:grid; grid-template-columns: auto 1fr; gap: 1.5rem; align-items: start;">
+        <div>
+          <div style="color:#a5b4fc; margin-bottom:0.5rem">📁 GitHub (mathfonta/)</div>
+          <div style="padding-left:1.5rem; color:#9ca3af">
+            <div>📦 equipe-aiox <span style="color:#6366f1">(framework)</span></div>
+            <div>📦 autopost-backend <span style="color:#10b981">(Python/FastAPI)</span></div>
+            <div>📦 autopost-frontend <span style="color:#3b82f6">(Next.js)</span></div>
+            <div style="margin-top:0.5rem; color:#6b7280">📦 futuro-projeto-1 <span style="color:#f59e0b">(reutiliza AIOX)</span></div>
+            <div style="color:#6b7280">📦 futuro-projeto-2 <span style="color:#f59e0b">(reutiliza AIOX)</span></div>
+          </div>
+        </div>
+        <div>
+          <div style="color:#a5b4fc; margin-bottom:0.5rem">🧠 Segundo Cérebro (Google Drive)</div>
+          <div style="padding-left:1.5rem; color:#9ca3af">
+            <div>📂 AutoPost/ <span style="color:#3b82f6">(projeto local)</span></div>
+            <div>📂 🌐 Global/ <span style="color:#8b5cf6">(cross-projeto)</span></div>
+            <div style="padding-left:1.5rem">├── PADROES_GLOBAIS.md</div>
+            <div style="padding-left:1.5rem">├── APRENDIZADOS.md</div>
+            <div style="padding-left:1.5rem">└── projetos/autopost.md</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box" style="margin-top:1.5rem">
+    💡 <strong>Como navegar esta apresentação:</strong> Use os botões no topo para ir para cada seção. Recomendamos ir na ordem — cada seção constrói sobre a anterior.
+  </div>
+</section>
+
+<!-- ===== SECTION 1: 3 REPOSITÓRIOS ===== -->
+<section class="section" id="s1">
+  <div class="section-title">
+    <div class="section-num">2</div>
+    <h1>Os 3 Repositórios do AutoPost</h1>
+  </div>
+  <p class="lead">O AutoPost é dividido em 3 repositórios independentes no GitHub, cada um com um papel específico.</p>
+
+  <div class="repo-container">
+
+    <!-- BACKEND -->
+    <div class="repo-box backend">
+      <span class="repo-badge" style="background:rgba(16,185,129,0.2); color:#6ee7b7">🐍 BACKEND</span>
+      <div style="font-weight:700; margin-bottom:0.5rem">autopost-backend</div>
+      <div style="font-size:0.75rem; color:var(--text3); margin-bottom:1rem">mathfonta/autopost-backend</div>
+      <ul class="file-tree">
+        <li class="dir">📁 app/</li>
+        <li class="indent1 dir">📁 api/</li>
+        <li class="indent1 dir">📁 models/</li>
+        <li class="indent1 dir">📁 services/</li>
+        <li class="dir">📁 migrations/</li>
+        <li class="dir">📁 tests/</li>
+        <li class="highlight">📄 requirements.txt</li>
+        <li class="highlight">🔧 Dockerfile</li>
+        <li class="file">📄 railway.toml</li>
+        <li class="highlight">📁 .github/workflows/</li>
+        <li class="indent1 file">✅ security.yml <span style="color:#10b981">(novo!)</span></li>
+      </ul>
+      <div style="margin-top:1rem; padding:0.75rem; background:rgba(16,185,129,0.1); border-radius:6px; font-size:0.75rem;">
+        <strong style="color:#6ee7b7">Stack:</strong><br>
+        Python 3.11, FastAPI, Celery<br>
+        SQLAlchemy, Supabase, Redis<br>
+        <strong style="color:#6ee7b7">Deploy:</strong> Railway 🚂
+      </div>
+    </div>
+
+    <!-- AIOX ROOT (CENTER) -->
+    <div class="repo-box aiox">
+      <span class="repo-badge" style="background:rgba(99,102,241,0.2); color:#a5b4fc">⚡ AIOX FRAMEWORK</span>
+      <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem">equipe-aiox</div>
+      <div style="font-size:0.75rem; color:var(--text3); margin-bottom:1rem">mathfonta/equipe-aiox</div>
+      <ul class="file-tree">
+        <li class="dir">📁 .aios-core/ <span style="color:#6366f1">(framework)</span></li>
+        <li class="indent1 dir">📁 development/</li>
+        <li class="indent2 dir">📁 tasks/ <span style="color:#9ca3af">(30+ tasks)</span></li>
+        <li class="indent2 dir">📁 templates/</li>
+        <li class="indent2 dir">📁 agents/</li>
+        <li class="indent2 dir">📁 workflows/</li>
+        <li class="dir">📁 .claude/ <span style="color:#6366f1">(configuração)</span></li>
+        <li class="indent1 dir">📁 commands/AIOS/agents/</li>
+        <li class="indent1 dir">📁 rules/</li>
+        <li class="dir">📁 docs/</li>
+        <li class="indent1 dir highlight">📁 stories/ <span style="color:#f59e0b">(stories ativas)</span></li>
+        <li class="indent1 dir">📁 qa/security-reports/</li>
+        <li class="indent1 dir">📁 architecture/</li>
+        <li class="file">📄 CLAUDE.md</li>
+      </ul>
+      <div style="margin-top:1rem; padding:0.75rem; background:rgba(99,102,241,0.1); border-radius:6px; font-size:0.75rem;">
+        <strong style="color:#a5b4fc">Este repo contém:</strong><br>
+        ✓ Definições dos agentes AIOS<br>
+        ✓ Tasks e workflows de desenvolvimento<br>
+        ✓ Stories do projeto AutoPost<br>
+        ✓ Relatórios de QA e segurança<br>
+        ✓ Regras e configurações do Claude
+      </div>
+    </div>
+
+    <!-- FRONTEND -->
+    <div class="repo-box frontend">
+      <span class="repo-badge" style="background:rgba(59,130,246,0.2); color:#93c5fd">⚛️ FRONTEND</span>
+      <div style="font-weight:700; margin-bottom:0.5rem">autopost-frontend</div>
+      <div style="font-size:0.75rem; color:var(--text3); margin-bottom:1rem">mathfonta/autopost-frontend</div>
+      <ul class="file-tree">
+        <li class="dir">📁 app/</li>
+        <li class="indent1 dir">📁 (auth)/</li>
+        <li class="indent1 dir">📁 dashboard/</li>
+        <li class="dir">📁 components/</li>
+        <li class="dir">📁 lib/</li>
+        <li class="dir">📁 hooks/</li>
+        <li class="highlight">📄 package.json</li>
+        <li class="highlight">🔧 next.config.ts</li>
+        <li class="highlight">📁 .github/workflows/</li>
+        <li class="indent1 file">✅ security.yml <span style="color:#3b82f6">(novo!)</span></li>
+      </ul>
+      <div style="margin-top:1rem; padding:0.75rem; background:rgba(59,130,246,0.1); border-radius:6px; font-size:0.75rem;">
+        <strong style="color:#93c5fd">Stack:</strong><br>
+        Next.js 16.2.4, TypeScript<br>
+        Tailwind CSS, shadcn/ui<br>
+        <strong style="color:#93c5fd">Deploy:</strong> Vercel ▲
+      </div>
+    </div>
+
+  </div>
+
+  <div class="warn-box">
+    ⚠️ <strong>Por que separado?</strong> O repo AIOX contém o <em>framework de desenvolvimento</em> (como trabalhar), não o código da aplicação. Backend e Frontend são repos independentes com deploy próprio. O AIOX <code>backend/</code> e <code>frontend/</code> são <strong>subpastas locais apenas</strong> (gitignored no AIOX root).
+  </div>
+
+  <h2 style="margin-top:2rem">🔄 Como os repos se comunicam</h2>
+  <div class="card">
+    <p style="margin:0">O repo AIOX <strong style="color:white">não controla</strong> backend ou frontend via git. Ele funciona como a <strong style="color:white">"inteligência de desenvolvimento"</strong>:</p>
+    <ul style="margin-top:0.75rem; color:var(--text2); padding-left:1.5rem; font-size:0.9rem; line-height:2;">
+      <li>Stories no AIOX → @dev implementa código no backend/frontend</li>
+      <li>GitHub Actions nos repos de app → CI/CD independente</li>
+      <li>@devops faz push para cada repo separadamente</li>
+      <li>Relatórios de QA salvos no AIOX para rastreabilidade</li>
+    </ul>
+  </div>
+
+  <h2 style="margin-top:2rem">✅ GitHub Actions criados hoje (Story 7.2)</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div style="color:#10b981; font-weight:700; margin-bottom:0.5rem">🐍 backend/security.yml</div>
+      <div class="cicd-flow">
+        <div class="cicd-step">git push → main</div>
+        <div class="cicd-arrow">→</div>
+        <div class="cicd-step">Python 3.11 setup</div>
+        <div class="cicd-arrow">→</div>
+        <div class="cicd-step">pip install pip-audit</div>
+        <div class="cicd-arrow">→</div>
+        <div class="cicd-step pass">pip-audit ✓</div>
+        <div class="cicd-arrow">→</div>
+        <div class="cicd-step fail">CRITICAL? → FAIL ✗</div>
+      </div>
+      <p style="font-size:0.8rem; margin:0">Executado a cada push para <code>main</code>. Falha automaticamente se encontrar vulnerabilidade CRITICAL em qualquer pacote Python.</p>
+    </div>
+    <div class="card">
+      <div style="color:#3b82f6; font-weight:700; margin-bottom:0.5rem">⚛️ frontend/security.yml</div>
+      <div class="cicd-flow">
+        <div class="cicd-step">git push → main</div>
+        <div class="cicd-arrow">→</div>
+        <div class="cicd-step">Node.js 20 setup</div>
+        <div class="cicd-arrow">→</div>
+        <div class="cicd-step">npm ci</div>
+        <div class="cicd-arrow">→</div>
+        <div class="cicd-step pass">npm audit ✓</div>
+        <div class="cicd-arrow">→</div>
+        <div class="cicd-step fail">CRITICAL? → FAIL ✗</div>
+      </div>
+      <p style="font-size:0.8rem; margin:0">Idem para o frontend Next.js. Usa <code>npm audit --audit-level=critical</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 2: DENTRO DO AIOX ===== -->
+<section class="section" id="s2">
+  <div class="section-title">
+    <div class="section-num">3</div>
+    <h1>Dentro do Repositório AIOX</h1>
+  </div>
+  <p class="lead">O repo AIOX tem uma estrutura em camadas — cada camada com um nível diferente de proteção e mutabilidade.</p>
+
+  <h2>🏗️ As 4 Camadas (L1 → L4)</h2>
+  <p>Imagine como um software: tem o núcleo que nunca muda, templates que raramente mudam, configurações do projeto, e o trabalho do dia-a-dia.</p>
+
+  <div class="layers">
+    <div class="layer layer-l1">
+      <div class="layer-info">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem">
+          <strong>L1 — Framework Core</strong>
+          <span class="layer-badge bg-red">🔒 NUNCA MODIFICAR</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text2)"><code>.aios-core/core/</code> · <code>.aios-core/constitution.md</code> · <code>bin/aios.js</code></div>
+        <div style="font-size:0.8rem; color:var(--text3); margin-top:0.25rem">O "kernel" do AIOX. A Constituição com os princípios inegociáveis. Modificar aqui quebra tudo.</div>
+      </div>
+      <div style="font-size:2rem; margin-left:1rem">⚙️</div>
+    </div>
+
+    <div class="layer layer-l2">
+      <div class="layer-info">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem">
+          <strong>L2 — Framework Templates</strong>
+          <span class="layer-badge bg-yellow">⚠️ EXTEND-ONLY</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text2)"><code>.aios-core/development/tasks/</code> · <code>templates/</code> · <code>workflows/</code></div>
+        <div style="font-size:0.8rem; color:var(--text3); margin-top:0.25rem">Tasks e templates reutilizáveis. Podem ser adaptados (<30% mudança) por stories de framework como a 7.2 que acabamos de implementar.</div>
+      </div>
+      <div style="font-size:2rem; margin-left:1rem">🧩</div>
+    </div>
+
+    <div class="layer layer-l3">
+      <div class="layer-info">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem">
+          <strong>L3 — Project Config</strong>
+          <span class="layer-badge bg-purple">✏️ MODIFICÁVEL (c/ cuidado)</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text2)"><code>.aios-core/data/</code> · <code>agents/*/MEMORY.md</code> · <code>core-config.yaml</code></div>
+        <div style="font-size:0.8rem; color:var(--text3); margin-top:0.25rem">Configuração específica do projeto. MEMORY.md de cada agente fica aqui — é onde o conhecimento acumulado vive.</div>
+      </div>
+      <div style="font-size:2rem; margin-left:1rem">⚙️</div>
+    </div>
+
+    <div class="layer layer-l4">
+      <div class="layer-info">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem">
+          <strong>L4 — Project Runtime</strong>
+          <span class="layer-badge bg-green">🟢 SEMPRE MODIFICAR</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text2)"><code>docs/stories/</code> · <code>docs/qa/</code> · <code>docs/architecture/</code></div>
+        <div style="font-size:0.8rem; color:var(--text3); margin-top:0.25rem">O trabalho do dia-a-dia. Stories, relatórios QA, documentação do projeto. Tudo que o @dev cria e o @qa revisa.</div>
+      </div>
+      <div style="font-size:2rem; margin-left:1rem">📝</div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:2rem">📋 Story Lifecycle — O Fluxo de Trabalho</h2>
+  <p>Toda feature começa como uma story. Segue um ciclo rígido para garantir qualidade.</p>
+
+  <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.5rem; margin:1.5rem 0; font-size:0.85rem;">
+    <div style="background:rgba(99,102,241,0.2); border:1px solid var(--accent); border-radius:8px; padding:0.75rem 1rem; text-align:center">
+      <div style="font-size:1.2rem">📝</div>
+      <div style="font-weight:600">Draft</div>
+      <div style="color:var(--text3); font-size:0.75rem">@sm cria</div>
+    </div>
+    <div style="color:var(--text3); font-size:1.4rem">→</div>
+    <div style="background:rgba(59,130,246,0.2); border:1px solid var(--blue); border-radius:8px; padding:0.75rem 1rem; text-align:center">
+      <div style="font-size:1.2rem">✅</div>
+      <div style="font-weight:600">Ready</div>
+      <div style="color:var(--text3); font-size:0.75rem">@po valida</div>
+    </div>
+    <div style="color:var(--text3); font-size:1.4rem">→</div>
+    <div style="background:rgba(245,158,11,0.2); border:1px solid var(--yellow); border-radius:8px; padding:0.75rem 1rem; text-align:center">
+      <div style="font-size:1.2rem">💻</div>
+      <div style="font-weight:600">InProgress</div>
+      <div style="color:var(--text3); font-size:0.75rem">@dev implementa</div>
+    </div>
+    <div style="color:var(--text3); font-size:1.4rem">→</div>
+    <div style="background:rgba(16,185,129,0.2); border:1px solid var(--green); border-radius:8px; padding:0.75rem 1rem; text-align:center">
+      <div style="font-size:1.2rem">🔍</div>
+      <div style="font-weight:600">InReview</div>
+      <div style="color:var(--text3); font-size:0.75rem">@qa revisa</div>
+    </div>
+    <div style="color:var(--text3); font-size:1.4rem">→</div>
+    <div style="background:rgba(16,185,129,0.3); border:2px solid var(--green); border-radius:8px; padding:0.75rem 1rem; text-align:center">
+      <div style="font-size:1.2rem">🚀</div>
+      <div style="font-weight:600">Done</div>
+      <div style="color:var(--text3); font-size:0.75rem">@devops push</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📊 IDS — Antes de criar, sempre verificar</h3>
+    <p>Antes de criar qualquer arquivo, o sistema verifica se algo parecido já existe. Isso se chama <strong style="color:white">Incremental Development System (IDS)</strong>.</p>
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.75rem;">
+      <div style="flex:1; min-width:150px; text-align:center; padding:0.75rem; background:rgba(16,185,129,0.1); border-radius:8px;">
+        <div style="color:#6ee7b7; font-size:1.5rem">♻️</div>
+        <div style="font-weight:700; color:#6ee7b7">REUSE</div>
+        <div style="font-size:0.75rem; color:var(--text3)">Relevância ≥90%<br>Usa direto</div>
+      </div>
+      <div style="flex:1; min-width:150px; text-align:center; padding:0.75rem; background:rgba(245,158,11,0.1); border-radius:8px;">
+        <div style="color:#fcd34d; font-size:1.5rem">🔧</div>
+        <div style="font-weight:700; color:#fcd34d">ADAPT</div>
+        <div style="font-size:0.75rem; color:var(--text3)">60-89% relevância<br>Modifica &lt;30%</div>
+      </div>
+      <div style="flex:1; min-width:150px; text-align:center; padding:0.75rem; background:rgba(99,102,241,0.1); border-radius:8px;">
+        <div style="color:#a5b4fc; font-size:1.5rem">✨</div>
+        <div style="font-weight:700; color:#a5b4fc">CREATE</div>
+        <div style="font-size:0.75rem; color:var(--text3)">Sem equivalente<br>Justificativa obrigatória</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 3: AGENTES ===== -->
+<section class="section" id="s3">
+  <div class="section-title">
+    <div class="section-num">4</div>
+    <h1>Os 13 Agentes AIOX</h1>
+  </div>
+  <p class="lead">Cada agente é um especialista com persona, comandos e memória próprios. Você ativa com <code>@nome</code> e dá comandos com <code>*comando</code>.</p>
+
+  <div class="agents-grid">
+    <div class="agent-card" onclick="showAgentDetail('aios-master')">
+      <div class="agent-icon">👑</div>
+      <div class="agent-name">@aios-master</div>
+      <div class="agent-persona">Orion — Orquestrador</div>
+      <div class="agent-role">Governa o framework, executa qualquer task</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('pm')">
+      <div class="agent-icon">📋</div>
+      <div class="agent-name">@pm</div>
+      <div class="agent-persona">Morgan — Estrategista</div>
+      <div class="agent-role">PRDs, Epics, Roadmap</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('po')">
+      <div class="agent-icon">🎯</div>
+      <div class="agent-name">@po</div>
+      <div class="agent-persona">Pax — Balanceador</div>
+      <div class="agent-role">Valida stories, backlog</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('sm')">
+      <div class="agent-icon">🌊</div>
+      <div class="agent-name">@sm</div>
+      <div class="agent-persona">River — Facilitador</div>
+      <div class="agent-role">Cria stories, sprint planning</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('dev')">
+      <div class="agent-icon">💻</div>
+      <div class="agent-name">@dev</div>
+      <div class="agent-persona">Dex — Builder</div>
+      <div class="agent-role">Implementa código, testes</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('qa')">
+      <div class="agent-icon">🔍</div>
+      <div class="agent-name">@qa</div>
+      <div class="agent-persona">Quinn — Guardião</div>
+      <div class="agent-role">Code review, quality gate</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('security')">
+      <div class="agent-icon">🛡️</div>
+      <div class="agent-name">@security</div>
+      <div class="agent-persona">Sage — Sentinela</div>
+      <div class="agent-role">OWASP audit, dep-audit, secrets</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('architect')">
+      <div class="agent-icon">🏗️</div>
+      <div class="agent-name">@architect</div>
+      <div class="agent-persona">Aria — Visionária</div>
+      <div class="agent-role">Decisões de arquitetura</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('data-engineer')">
+      <div class="agent-icon">🗄️</div>
+      <div class="agent-name">@data-engineer</div>
+      <div class="agent-persona">Dara — Especialista DB</div>
+      <div class="agent-role">Schema, RLS, migrations</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('devops')">
+      <div class="agent-icon">🚀</div>
+      <div class="agent-name">@devops</div>
+      <div class="agent-persona">Gage — Automator</div>
+      <div class="agent-role"><strong>EXCLUSIVO:</strong> git push, PR, CI/CD</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('analyst')">
+      <div class="agent-icon">📊</div>
+      <div class="agent-name">@analyst</div>
+      <div class="agent-persona">Alex — Pesquisador</div>
+      <div class="agent-role">Pesquisa, análise de mercado</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('ux-design-expert')">
+      <div class="agent-icon">🎨</div>
+      <div class="agent-name">@ux-design-expert</div>
+      <div class="agent-persona">Uma — Designer</div>
+      <div class="agent-role">UX/UI, design system, wireframes</div>
+    </div>
+    <div class="agent-card" onclick="showAgentDetail('squad-creator')">
+      <div class="agent-icon">🏗️</div>
+      <div class="agent-name">@squad-creator</div>
+      <div class="agent-persona">Craft — Orquestrador Multi-Agente</div>
+      <div class="agent-role">Cria squads para tarefas paralelas complexas</div>
+    </div>
+  </div>
+
+  <div id="agent-detail" style="display:none; margin-top:1.5rem;"></div>
+
+  <h2 style="margin-top:2rem">🔀 Como os agentes colaboram</h2>
+  <div class="card">
+    <p>O fluxo padrão de desenvolvimento (Story Development Cycle):</p>
+    <div style="font-family:monospace; font-size:0.85rem; background:var(--surface2); padding:1rem; border-radius:8px; margin-top:0.75rem; line-height:2.2; overflow-x:auto;">
+      <span style="color:#a5b4fc">@sm</span> <span style="color:#6b7280">*draft</span> → cria story.md
+      <br>↓
+      <br><span style="color:#6366f1">@po</span> <span style="color:#6b7280">*validate-story-draft</span> → GO (9/10) → muda status: Draft→Ready
+      <br>↓
+      <br><span style="color:#fcd34d">@dev</span> <span style="color:#6b7280">*develop</span> → implementa, testes, atualiza checkboxes → status: Ready→InProgress
+      <br>↓
+      <br><span style="color:#6ee7b7">@qa</span> <span style="color:#6b7280">*qa-gate</span> → review 7 pontos → PASS → status: InProgress→InReview
+      <br>↓
+      <br><span style="color:#f97316">@devops</span> <span style="color:#6b7280">*push</span> → git push, gh pr create, merge → status: InReview→Done
+      <br>↓
+      <br><span style="color:#8b5cf6">@security</span> <span style="color:#6b7280">*dep-audit</span> → auditoria de dependências → relatório em docs/qa/
+    </div>
+  </div>
+
+  <h2 style="margin-top:2rem">🔒 Regras de Autoridade</h2>
+  <table class="compare-table">
+    <thead>
+      <tr><th>Agente</th><th>Operação Exclusiva</th><th>Outros agentes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>🚀 @devops</td>
+        <td><code>git push</code>, <code>gh pr create</code>, CI/CD</td>
+        <td>BLOQUEADO para todos os outros</td>
+      </tr>
+      <tr>
+        <td>🎯 @po</td>
+        <td>Validar stories (10-point checklist)</td>
+        <td>Outros não podem aprovar stories</td>
+      </tr>
+      <tr>
+        <td>🛡️ @security</td>
+        <td>OWASP audit, threat model, dep-audit</td>
+        <td>@qa faz verificação superficial apenas</td>
+      </tr>
+      <tr>
+        <td>💻 @dev</td>
+        <td><code>git add</code>, <code>git commit</code>, implementação</td>
+        <td>Pode commitar, mas NÃO pode fazer push</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== SECTION 4: SEGUNDO CÉREBRO ===== -->
+<section class="section" id="s4">
+  <div class="section-title">
+    <div class="section-num">5</div>
+    <h1>O Segundo Cérebro</h1>
+  </div>
+  <p class="lead">O sistema de memória persistente que garante que nenhum aprendizado se perde entre sessões ou projetos.</p>
+
+  <div class="highlight-box">
+    <h2>🧠 Por que existe?</h2>
+    <p>LLMs (Claude, GPT) têm janela de contexto limitada e <strong style="color:white">esquecem tudo ao final de cada sessão</strong>. O Segundo Cérebro resolve isso: é uma memória externa, estruturada, que é lida no início de cada sessão e alimentada durante o trabalho.</p>
+  </div>
+
+  <div class="brain-grid">
+    <div class="brain-box brain-local">
+      <div style="color:#93c5fd; font-weight:700; margin-bottom:0.75rem; font-size:1rem">📂 Cérebro Local — AutoPost</div>
+      <div style="font-family:monospace; font-size:0.8rem; color:var(--text2); line-height:2;">
+        G:\Meu Drive\OBSidian\AutoPost\
+        <br>├── 📊 <span style="color:white">Status do Projeto.md</span>
+        <br>│   └── O que está feito, pendente, story ativa
+        <br>├── 🧠 <span style="color:white">Cerebro/APRENDIZADOS.md</span>
+        <br>│   └── Erros, soluções, decisões técnicas
+        <br>├── 💡 <span style="color:white">Ideas/</span>
+        <br>│   ├── <span style="color:white">Novas.md</span> ← lido na sessão
+        <br>│   ├── Em Andamento.md
+        <br>│   └── Incorporadas.md
+        <br>├── 📍 <span style="color:white">Produto/Roadmap.md</span>
+        <br>└── 🏠 <span style="color:white">Home.md</span>
+      </div>
+      <div style="margin-top:1rem; font-size:0.75rem; color:var(--text3)">
+        Vault: Obsidian (Google Drive)<br>
+        Atualizado: durante cada sessão
+      </div>
+    </div>
+
+    <div class="brain-box brain-global">
+      <div style="color:#c4b5fd; font-weight:700; margin-bottom:0.75rem; font-size:1rem">🌐 Cérebro Global — Cross-Projeto</div>
+      <div style="font-family:monospace; font-size:0.8rem; color:var(--text2); line-height:2;">
+        G:\Meu Drive\OBSidian\🌐 Global\
+        <br>├── 📋 <span style="color:white">PADROES_GLOBAIS.md</span>
+        <br>│   └── Padrões que funcionam em qualquer projeto
+        <br>├── 🎓 <span style="color:white">APRENDIZADOS.md</span>
+        <br>│   └── Lições reutilizáveis cross-projeto
+        <br>├── 📄 <span style="color:white">TEMPLATE_CLAUDE.md</span>
+        <br>│   └── Template CLAUDE.md para novos projetos
+        <br>└── 📁 <span style="color:white">projetos/</span>
+        <br>    └── autopost.md (sumário)
+      </div>
+      <div style="margin-top:1rem; font-size:0.75rem; color:var(--text3)">
+        Atualizado: motor mensal automático<br>
+        Fonte: síntese de todos os cérebros locais
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:2rem">📖 A Regra 0 — Protocolo de Sessão</h2>
+  <p>Toda sessão começa com leitura obrigatória do Segundo Cérebro. <strong style="color:white">Nenhuma ação antes disso.</strong></p>
+
+  <div class="cycle-steps" style="margin-top:1.5rem;">
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:var(--blue)">1</div>
+      <div class="cycle-content">
+        <div class="cycle-title">📊 Ler Status do Projeto.md</div>
+        <div class="cycle-desc">Entender o que está feito, o que está pendente, qual story está ativa no momento</div>
+        <div class="cycle-files">G:\Meu Drive\OBSidian\AutoPost\📊 Status do Projeto.md</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:var(--accent2)">2</div>
+      <div class="cycle-content">
+        <div class="cycle-title">🎓 Ler APRENDIZADOS.md</div>
+        <div class="cycle-desc">Absorver erros já cometidos, soluções encontradas, padrões descobertos — para não repetir</div>
+        <div class="cycle-files">G:\Meu Drive\OBSidian\AutoPost\🧠 Cerebro\APRENDIZADOS.md</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:var(--yellow)" style="color:black">3</div>
+      <div class="cycle-content">
+        <div class="cycle-title">💡 Ler Ideas/Novas.md</div>
+        <div class="cycle-desc">Verificar se Matheus inseriu novas ideias desde a última sessão</div>
+        <div class="cycle-files">G:\Meu Drive\OBSidian\AutoPost\💡 Ideas\Novas.md</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:var(--green)">4</div>
+      <div class="cycle-content">
+        <div class="cycle-title">📊 Git Startup Check</div>
+        <div class="cycle-desc">Verificar status dos repos backend/ e frontend/ — alertar se há código sem commit ou sem push</div>
+        <div class="cycle-files">.claude/rules/git-startup-check.md</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:var(--accent)">✓</div>
+      <div class="cycle-content">
+        <div class="cycle-title">✅ Confirmar e iniciar</div>
+        <div class="cycle-desc">"🧠 Cérebro carregado. Story ativa: X. Último aprendizado: Y. Pronto para continuar."</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:2rem">🤖 MEMORY.md por Agente</h2>
+  <p>Cada agente também tem sua própria memória persistente em <code>.aios-core/development/agents/{agente}/MEMORY.md</code>. Atualizada automaticamente após cada audit, review ou análise importante.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div style="color:#6ee7b7; font-size:0.85rem; font-family:monospace">security/MEMORY.md</div>
+      <p style="font-size:0.8rem; margin-top:0.5rem">Histórico de auditorias, findings recorrentes, padrões de risco do stack (Supabase RLS, Railway env vars, Meta OAuth tokens...)</p>
+    </div>
+    <div class="card">
+      <div style="color:#93c5fd; font-size:0.85rem; font-family:monospace">dev/MEMORY.md</div>
+      <p style="font-size:0.8rem; margin-top:0.5rem">Padrões de implementação, decisões técnicas, gotchas específicos do projeto</p>
+    </div>
+    <div class="card">
+      <div style="color:#fcd34d; font-size:0.85rem; font-family:monospace">qa/MEMORY.md</div>
+      <p style="font-size:0.8rem; margin-top:0.5rem">Issues recorrentes, padrões de qualidade, critérios específicos do projeto</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 5: APRENDIZADO CÍCLICO ===== -->
+<section class="section" id="s5">
+  <div class="section-title">
+    <div class="section-num">6</div>
+    <h1>O Aprendizado Cíclico</h1>
+  </div>
+  <p class="lead">Como o conhecimento flui desde uma implementação até virar padrão global — e alimentar o próximo projeto.</p>
+
+  <div class="highlight-box">
+    <h2>🔄 O Grande Ciclo</h2>
+    <p>Cada projeto implementado <strong style="color:white">contribui conhecimento</strong> para o sistema. Esse conhecimento é promovido automaticamente para o nível global uma vez por mês — tornando todos os projetos futuros mais inteligentes desde o primeiro dia.</p>
+  </div>
+
+  <div class="cycle-steps" style="margin-top:2rem;">
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:#1d4ed8">1</div>
+      <div class="cycle-content">
+        <div class="cycle-title">💻 @dev implementa uma feature</div>
+        <div class="cycle-desc">Encontra um bug difícil, toma uma decisão de arquitetura, descobre um padrão que funciona bem no stack específico do projeto.</div>
+        <div class="cycle-files">Exemplo: "Celery+asyncpg precisa NullPool — conexões persistentes causam deadlock"</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:#047857">2</div>
+      <div class="cycle-content">
+        <div class="cycle-title">📝 Registra no Segundo Cérebro Local</div>
+        <div class="cycle-desc">Via <code>*cerebro-update "descoberta"</code> — o agente adiciona a entrada em APRENDIZADOS.md com contexto, descoberta e como aplicar.</div>
+        <div class="cycle-files">G:\...\AutoPost\🧠 Cerebro\APRENDIZADOS.md → seção "Operações"</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:#7c3aed">3</div>
+      <div class="cycle-content">
+        <div class="cycle-title">🤖 MEMORY.md do agente é atualizado</div>
+        <div class="cycle-desc">O agente específico (ex: @dev, @security) atualiza seu MEMORY.md no repo AIOX — ficando disponível para próximas sessões daquele agente no mesmo projeto.</div>
+        <div class="cycle-files">.aios-core/development/agents/dev/MEMORY.md</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:#b45309">4</div>
+      <div class="cycle-content">
+        <div class="cycle-title">📅 Motor de Promoção Mensal</div>
+        <div class="cycle-desc">Na primeira segunda-feira de cada mês, um script automático lê todos os cérebros locais de todos os projetos ativos e extrai padrões que aparecem em 2+ projetos.</div>
+        <div class="cycle-files">Script: init-cerebro-projeto.ps1 · Destino: G:\Meu Drive\OBSidian\🌐 Global\PADROES_GLOBAIS.md</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:var(--accent)">5</div>
+      <div class="cycle-content">
+        <div class="cycle-title">🌐 PADROES_GLOBAIS.md atualizado</div>
+        <div class="cycle-desc">O padrão vira conhecimento cross-projeto: "em projetos com Celery + asyncio, sempre usar NullPool". Agora está disponível para <em>qualquer</em> projeto futuro.</div>
+        <div class="cycle-files">G:\Meu Drive\OBSidian\🌐 Global\PADROES_GLOBAIS.md</div>
+      </div>
+    </div>
+    <div class="cycle-step">
+      <div class="cycle-num" style="background:var(--green)">6</div>
+      <div class="cycle-content">
+        <div class="cycle-title">🚀 Novo Projeto começa mais inteligente</div>
+        <div class="cycle-desc">Ao iniciar um novo projeto, o script <code>init-cerebro-projeto.ps1</code> pré-popula o cérebro local com os padrões globais. O agente @architect já sabe dos trade-offs antes de fazer qualquer decisão.</div>
+        <div class="cycle-files">Resultado: menos erros repetidos, stack decisions mais rápidas</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:2rem">📊 O que já está no ciclo hoje</h2>
+
+  <table class="compare-table">
+    <thead>
+      <tr><th>Fonte</th><th>Aprendizado Registrado</th><th>Nível</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>AutoPost backend</td>
+        <td>Railway: <code>releaseCommand</code> em <code>[[services]]</code> não executa — usar <code>lifespan</code></td>
+        <td><span class="tag bg-blue">Local</span></td>
+      </tr>
+      <tr>
+        <td>AutoPost backend</td>
+        <td>Celery + asyncpg: sempre <code>NullPool</code> para evitar deadlock em processo fork</td>
+        <td><span class="tag bg-blue">Local</span></td>
+      </tr>
+      <tr>
+        <td>AutoPost + Claude</td>
+        <td>Claude retorna JSON com markdown mesmo com instrução contrária — usar strip explícito</td>
+        <td><span class="tag bg-blue">Local</span></td>
+      </tr>
+      <tr>
+        <td>AIOX Framework</td>
+        <td>Agentes AIOX precisam de ADS (Architecture Decision) antes de criar um novo agente</td>
+        <td><span class="tag bg-purple">Framework</span></td>
+      </tr>
+      <tr>
+        <td>AutoPost security</td>
+        <td>Baseline Python limpa: 0 vulns em 99 pacotes (pip-audit, 2026-04-25)</td>
+        <td><span class="tag bg-green">Security</span></td>
+      </tr>
+      <tr>
+        <td>AutoPost security</td>
+        <td>npm audit: 0 CRITICAL/HIGH em 135 deps Node.js. MOD-001 (postcss bundled Next.js) = LOW real risk — não aplicar "fix" de downgrade sugerido pelo npm</td>
+        <td><span class="tag bg-green">Security</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    🔮 <strong>Efeito acumulativo:</strong> Quanto mais projetos você rodar com o AIOX, mais rico fica o cérebro global. O terceiro projeto se beneficia do aprendizado do primeiro e segundo sem nenhum esforço manual.
+  </div>
+</section>
+
+<!-- ===== SECTION 6: NOVOS PROJETOS ===== -->
+<section class="section" id="s6">
+  <div class="section-title">
+    <div class="section-num">7</div>
+    <h1>Novos Projetos e Projetos Paralelos</h1>
+  </div>
+  <p class="lead">Como a arquitetura AIOX se aplica quando você começa um novo projeto — e como ele se beneficia do que foi construído no AutoPost.</p>
+
+  <div class="highlight-box">
+    <h2>🏗️ Modelo de Reuso</h2>
+    <p>O AIOX foi desenhado para ser <strong style="color:white">reaproveitado entre projetos</strong>. O AutoPost não é um projeto isolado — é o <em>primeiro projeto</em> de uma linha de produtos. Cada novo projeto herda o framework e o conhecimento acumulado.</p>
+  </div>
+
+  <h2 style="margin-top:2rem">🔄 Como iniciar um novo projeto</h2>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:0.5rem; margin:1.5rem 0;">
+    <div class="flow-step" style="border-color:var(--accent)">
+      <div style="font-size:1.4rem; margin-bottom:0.4rem">1️⃣</div>
+      <strong>Clone AIOX Root</strong><br>
+      <span style="color:var(--text3)">Copia o framework completo</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div style="font-size:1.4rem; margin-bottom:0.4rem">2️⃣</div>
+      <strong>init-cerebro</strong><br>
+      <span style="color:var(--text3)">Pré-popula com padrões globais</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div style="font-size:1.4rem; margin-bottom:0.4rem">3️⃣</div>
+      <strong>Configura Repos</strong><br>
+      <span style="color:var(--text3)">Backend/Frontend separados</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div style="font-size:1.4rem; margin-bottom:0.4rem">4️⃣</div>
+      <strong>@pm *create-epic</strong><br>
+      <span style="color:var(--text3)">Primeiro epic do novo produto</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-color:var(--green)">
+      <div style="font-size:1.4rem; margin-bottom:0.4rem">5️⃣</div>
+      <strong>Desenvolver</strong><br>
+      <span style="color:var(--text3)">SDC com agentes familiar</span>
+    </div>
+  </div>
+
+  <h2 style="margin-top:2rem">🗂️ Estrutura de um Projeto Novo</h2>
+  <table class="compare-table">
+    <thead>
+      <tr><th>Componente</th><th>AutoPost (atual)</th><th>Novo Projeto</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>AIOX Framework</td>
+        <td><code>mathfonta/equipe-aiox</code></td>
+        <td><code>mathfonta/projeto-x-aiox</code> (clone)</td>
+      </tr>
+      <tr>
+        <td>Agentes</td>
+        <td>13 agentes + personas</td>
+        <td>Mesmos 13 agentes — nenhuma reescrita</td>
+      </tr>
+      <tr>
+        <td>Tasks/Templates</td>
+        <td>30+ tasks em L2</td>
+        <td>Herdadas + novas tasks específicas</td>
+      </tr>
+      <tr>
+        <td>Segundo Cérebro</td>
+        <td>AutoPost/ (local)</td>
+        <td>ProjetoX/ (local) + 🌐 Global/ (compartilhado)</td>
+      </tr>
+      <tr>
+        <td>GitHub Actions</td>
+        <td>backend/security.yml, frontend/security.yml</td>
+        <td>Copiados como template — adaptar apenas o stack</td>
+      </tr>
+      <tr>
+        <td>Histórico de Segurança</td>
+        <td>baseline limpa 2026-04-25</td>
+        <td>Novo baseline, mas com messos padrões de auditoria</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:2rem">⚡ O que um novo projeto <em>já tem</em> no Dia 1</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div style="font-size:1.5rem; margin-bottom:0.5rem">🤖</div>
+      <h3>13 Agentes prontos</h3>
+      <p>Com personas, comandos e regras de autoridade já testados e validados no AutoPost.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:1.5rem; margin-bottom:0.5rem">🧩</div>
+      <h3>30+ Tasks de desenvolvimento</h3>
+      <p>security-scan, pre-push-quality-gate, dep-audit, create-story, qa-gate... tudo pronto para uso.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:1.5rem; margin-bottom:0.5rem">🔒</div>
+      <h3>CI/CD de segurança</h3>
+      <p>GitHub Actions de auditoria Python + npm como templates. Só adaptar o stack.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:1.5rem; margin-bottom:0.5rem">🧠</div>
+      <h3>Conhecimento acumulado</h3>
+      <p>Padrões globais pré-populados no cérebro local. O @architect já sabe dos trade-offs antes de decidir.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:1.5rem; margin-bottom:0.5rem">📋</div>
+      <h3>Story lifecycle completo</h3>
+      <p>Draft → Ready → InProgress → InReview → Done com todos os gates de qualidade.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:1.5rem; margin-bottom:0.5rem">⚖️</div>
+      <h3>IDS anti-retrabalho</h3>
+      <p>Sistema que verifica automaticamente o que pode ser reutilizado antes de criar qualquer coisa nova.</p>
+    </div>
+  </div>
+
+  <h2 style="margin-top:2rem">📱 E sobre trabalhar do celular?</h2>
+  <div class="card">
+    <p>Desde que o AIOX está no git (<code>mathfonta/equipe-aiox</code>), você pode:</p>
+    <ul style="padding-left:1.5rem; color:var(--text2); font-size:0.9rem; line-height:2.2; margin-top:0.75rem;">
+      <li>Abrir o <strong style="color:white">Claude.ai/code no browser</strong> em qualquer dispositivo</li>
+      <li>Fazer checkout do repo AIOX para um ambiente cloud (GitHub Codespaces)</li>
+      <li>Usar a extensão do <strong style="color:white">VSCode Mobile</strong> com SSH para o seu PC</li>
+      <li>Ver o progresso das stories via GitHub (arquivos .md são legíveis no GitHub)</li>
+      <li>Adicionar ideias ao Obsidian Mobile → sincroniza via Google Drive → disponível na próxima sessão</li>
+    </ul>
+    <div class="warn-box" style="margin-top:1rem">
+      ⚠️ <strong>Limitação atual:</strong> Para implementar código (chamar @dev), você precisa de um ambiente com o Claude Code CLI ou extensão VSCode instalada. O celular funciona bem para revisar, planejar e adicionar ideias — mas não para implementação direta.
+    </div>
+  </div>
+
+  <div class="info-box" style="margin-top:2rem">
+    🎯 <strong>Resumo da arquitetura em uma frase:</strong><br>
+    AIOX = Framework de desenvolvimento IA reutilizável + Sistema de memória persistente + Agentes especializados que colaboram com regras claras de autoridade + Ciclo de aprendizado que melhora a cada projeto.
+  </div>
+</section>
+
+<script>
+const sections = document.querySelectorAll('.section');
+const navBtns = document.querySelectorAll('.nav-btn');
+const progress = document.getElementById('progress');
+
+function showSection(idx) {
+  sections.forEach((s, i) => s.classList.toggle('active', i === idx));
+  navBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
+  progress.style.width = ((idx + 1) / sections.length * 100) + '%';
+  window.scrollTo(0, 0);
+}
+
+const agentDetails = {
+  'aios-master': { icon: '👑', name: 'Orion — AIOS Master', desc: 'O orquestrador supremo. Pode executar qualquer task de qualquer agente diretamente. Usado para: governança do framework, criação de novos agentes/tasks, operações cross-agent.', cmds: ['*create agent/task', '*modify agent', '*ids check', '*run-workflow', '*correct-course'] },
+  'pm': { icon: '📋', name: 'Morgan — Product Manager', desc: 'Dono dos requisitos de negócio. Cria PRDs, define epics, garante alinhamento estratégico.', cmds: ['*create-epic', '*execute-epic', '*shard-doc', '*create-doc {prd}'] },
+  'po': { icon: '🎯', name: 'Pax — Product Owner', desc: 'Guardião da qualidade das stories. Valida com checklist de 10 pontos. Decide GO/NO-GO antes do @dev começar.', cmds: ['*validate-story-draft', '*close-story', '*backlog-review', '*backlog-prioritize'] },
+  'sm': { icon: '🌊', name: 'River — Scrum Master', desc: 'Cria as stories a partir dos epics e PRDs. Garante que o backlog está sempre pronto para desenvolvimento.', cmds: ['*draft', '*create-story', '*stories-index'] },
+  'dev': { icon: '💻', name: 'Dex — Developer', desc: 'Implementa o código. Pode commitar mas NÃO pode fazer push (exclusivo do @devops). Segue a story linha por linha.', cmds: ['*develop', '*develop-yolo', '*run-tests', '*apply-qa-fixes', '*worktree-create'] },
+  'qa': { icon: '🔍', name: 'Quinn — Quality Assurance', desc: 'Revisa todo o código antes do merge. 7 quality checks: code review, testes, ACs, regressões, performance, segurança, docs.', cmds: ['*qa-gate', '*qa-loop', '*coderabbit-review', '*create-suite'] },
+  'security': { icon: '🛡️', name: 'Sage — Security Auditor', desc: 'READ-ONLY — nunca modifica código. Audita, mapeia ameaças, cria stories de remediação diretamente (aprovado por Matheus).', cmds: ['*audit', '*dep-audit ← NOVO', '*threat-model', '*secrets-check', '*rls-review', '*create-remediation'] },
+  'architect': { icon: '🏗️', name: 'Aria — Architect', desc: 'Toma decisões de arquitetura e seleção de tecnologia. Avalia complexidade antes de implementar.', cmds: ['*design-system', '*tech-decision', '*complexity-assess', '*generate-ai-prompt'] },
+  'data-engineer': { icon: '🗄️', name: 'Dara — Data Engineer', desc: 'Especialista em banco de dados. Recebe decisões do @architect e implementa DDL, RLS, migrations.', cmds: ['*design-schema', '*rls-policy', '*migration', '*optimize-query'] },
+  'devops': { icon: '🚀', name: 'Gage — DevOps', desc: 'EXCLUSIVO: único agente autorizado a fazer git push, criar PRs e gerenciar CI/CD. Também gerencia MCPs e infraestrutura.', cmds: ['*push', '*pre-push', '*create-pr', '*add-mcp', '*setup-mcp-docker'] },
+  'analyst': { icon: '📊', name: 'Alex — Analyst', desc: 'Pesquisa de mercado, análise de concorrentes, pesquisa técnica aprofundada.', cmds: ['*research', '*market-analysis', '*competitor-analysis', '*brainstorm'] },
+  'ux-design-expert': { icon: '🎨', name: 'Uma — UX/UI Designer', desc: 'Design de interfaces, wireframes, sistema de design, design tokens. Usada antes do @dev implementar qualquer tela nova — evita retrabalho de UI.', cmds: ['*user-research', '*wireframe', '*design-system', '*extract-tokens', '*ux-review', '*frontend-spec'] },
+  'squad-creator': { icon: '🏗️', name: 'Craft — Squad Creator', desc: 'Cria e gerencia squads — grupos de agentes colaborando em paralelo para tarefas complexas. Útil quando uma feature grande pode ser dividida entre múltiplos agentes simultâneos.', cmds: ['*create-squad', '*validate-squad', '*publish-squad', '*list-squads'] },
+};
+
+function showAgentDetail(id) {
+  const detail = document.getElementById('agent-detail');
+  const a = agentDetails[id];
+  if (!a) return;
+  detail.style.display = 'block';
+  detail.innerHTML = `
+    <div class="card" style="border-color:var(--accent)">
+      <div style="display:flex; gap:1rem; align-items:flex-start;">
+        <div style="font-size:2.5rem">${a.icon}</div>
+        <div>
+          <div style="font-weight:700; font-size:1.1rem; margin-bottom:0.25rem">${a.name}</div>
+          <p style="margin:0 0 0.75rem">${a.desc}</p>
+          <div style="font-size:0.8rem; color:var(--text3); margin-bottom:0.25rem">Comandos principais:</div>
+          <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+            ${a.cmds.map(c => `<code style="background:var(--surface2); padding:0.2rem 0.5rem; border-radius:4px; font-size:0.75rem; color:var(--accent)">${c}</code>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
+</body>
+</html>
