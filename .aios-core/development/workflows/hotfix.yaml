@@ -1,0 +1,63 @@
+name: hotfix
+title: Hotfix Workflow — Bug Crítico em Produção
+description: |
+  Processo leve (15–20 min) para correção de bugs críticos em produção.
+  Rastreável mas sem overhead do SDC completo.
+  Use quando: bug está quebrando produção e precisa de correção imediata.
+
+agents:
+  primary: dev
+  support: [devops]
+  notify: [aios-master]
+
+triggers:
+  - bug crítico reportado em produção
+  - pipeline falhando para múltiplos usuários
+  - erro 5xx em endpoint crítico
+
+phases:
+  - id: spec
+    name: Documentar o Bug
+    agent: dev
+    duration: 5min
+    task: hotfix-spec.md
+    output: hotfix-spec-{timestamp}.md em docs/qa/hotfixes/
+    gate: todos os 5 campos obrigatórios preenchidos
+
+  - id: implement
+    name: Implementar Correção
+    agent: dev
+    duration: 10–30min
+    rules:
+      - correção mínima — não refatorar além do necessário
+      - um commit por fix, mensagem com [HOTFIX] e referência ao spec
+      - sem mudanças em schema ou migrations (requer SDC completo)
+
+  - id: smoke
+    name: Smoke Test Manual
+    agent: dev
+    duration: 5min
+    checklist:
+      - reproduziu o bug antes da correção? (confirma que era real)
+      - testou o caminho exato que estava quebrado?
+      - testou pelo menos 1 caminho adjacente (sem regressão)?
+
+  - id: deploy
+    name: PR + Deploy
+    agent: devops
+    rules:
+      - abrir PR com título "[HOTFIX] {descrição curta}"
+      - referenciar hotfix-spec no body do PR
+      - aguardar CI verde antes de merge
+      - monitorar Railway por 5 min após deploy
+
+post_deploy:
+  - atualizar hotfix-spec com status RESOLVED e data
+  - criar story de follow-up se causa raiz exigir refactor maior
+  - registrar em APRENDIZADOS.md se a descoberta for não-óbvia
+
+constraints:
+  - NÃO use hotfix para features novas (use SDC)
+  - NÃO use hotfix para mudanças de schema
+  - NÃO pule o smoke test mesmo sob pressão
+  - MÁXIMO 3 hotfixes por semana — se passar disso, algo maior está errado
