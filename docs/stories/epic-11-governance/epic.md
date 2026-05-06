@@ -1,6 +1,6 @@
 # Epic 11 — Governança e Qualidade de Código
 
-**Status:** InProgress  
+**Status:** Done  
 **Criado em:** 2026-05-06  
 **Responsável:** @aios-master  
 
@@ -29,11 +29,11 @@ Fechar o ciclo **Spec → Implementação → QA → Deploy** com automação re
 
 ## Critérios de Sucesso
 
-- [ ] Push direto em `main` é bloqueado nos dois repos
-- [ ] PR sem CI verde não pode ser mergeado
-- [ ] `import app.agents.copywriter` é testado automaticamente
-- [ ] Caminho completo foto → awaiting_approval tem teste de integração
-- [ ] Existe workflow formal de hotfix documentado no AIOS
+- [x] Push direto em `main` é bloqueado nos dois repos
+- [x] PR sem CI verde não pode ser mergeado
+- [x] `import app.agents.copywriter` é testado automaticamente
+- [x] Caminho completo foto → awaiting_approval tem teste de integração
+- [x] Existe workflow formal de hotfix documentado no AIOS
 
 ## Relação com SDD
 
