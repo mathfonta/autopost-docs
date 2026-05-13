@@ -21,7 +21,11 @@ implementação ou análise pode ocorrer antes desta leitura.**
 3. Leia `G:\Meu Drive\OBSidian\AutoPost\💡 Ideas\Novas.md`
    → Verifique se Matheus inseriu novas ideias desde a última sessão
 
-4. Execute o **Git Startup Check** (`.claude/rules/git-startup-check.md`):
+4. **Configure autenticação Git** — leia `C:\\Projetos\\autopost\\.github-token` e execute `.claude/rules/git-auth.md`
+   → Configura credenciais GitHub no sandbox silenciosamente
+   → Permite que @devops faça push sem intervenção manual
+
+5. Execute o **Git Startup Check** (`.claude/rules/git-startup-check.md`):
    → Verifique git status de `backend/` e `frontend/`
    → Reporte arquivos não commitados, commits não pushed
    → Alerte se houver código sem story associada
