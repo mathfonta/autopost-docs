@@ -50,7 +50,12 @@
 | Meta OAuth tokens | Long-lived tokens (60d) armazenados em DB | HIGH | Monitorar |
 | Celery workers | NullPool + asyncio.run() — DB access em processo fork | MEDIUM | Monitorar |
 | JWT_SECRET | Sem rotação implementada | MEDIUM | Monitorar |
-| CORS config | allow_origin_regex — verificar permissividade | LOW | Monitorar |
+| CORS config | allow_origin_regex `.*\.vercel\.app` com credentials=True — EXPLOITÁVEL | HIGH | **SEC-01 aberta** |
+| Onboarding API | Sem rate limiting em /message e /start — abuso de Claude API | MEDIUM | Tech debt |
+| /health endpoint | Expõe env + erros de DB sem autenticação | MEDIUM | Tech debt |
+| Meta access token | Armazenado plaintext no DB | MEDIUM | Tech debt |
+| Push endpoint SSRF | Subscription endpoint usado sem validação de domínio | MEDIUM | Tech debt |
+| Prompt injection | strategy/user_context passados direto para Claude sem sanitização | MEDIUM | Tech debt |
 
 ### Padrões de Verificação
 
@@ -70,6 +75,10 @@
 - 2026-04-25 | Secrets Check (Smoke Test) | CLEAN | 0C 0H 1M 0L | security-secrets-check-2026-04-25.md
 - 2026-04-25 | Dep Audit — Python (pip-audit 2.10.0) | PASS | 0C 0H 0M 0L | dep-audit-2026-04-25.md
 - 2026-04-26 | Dep Audit — Node.js (npm audit 10.8.2) | PASS | 0C 0H 2M 0L | dep-audit-2026-04-26.md
+- 2026-05-05 | OWASP Top 10 Full Audit (análise estática) | CONCERNS | 0C 1H 5M 3L | security-report-2026-05-05.md
+- 2026-05-05 | Secrets Check (varredura completa) | CLEAN | 0C 0H 0M 3-INFO | security-secrets-check-2026-05-05.md
+- 2026-05-05 | RLS Review (todas as tabelas — análise estática) | CONCERNS | 0C 1H 1M 0L | rls-review-2026-05-05.md
+- 2026-05-05 | Threat Model STRIDE (sistema completo) | CONCERNS | 0C 0H 4M 3L + 1 BUG | threat-model-2026-05-05.md
 
 ## Recurring Findings
 <!-- Vulnerabilidades que reaparecem entre auditorias — sinal de débito sistêmico -->
@@ -80,3 +89,16 @@
 
 ## Promotion Candidates
 <!-- Padrões que aparecem em 3+ auditorias — candidatos para global APRENDIZADOS.md -->
+
+## Findings Abertos (não remediados)
+
+| ID | Severidade | Descrição | Story |
+|----|-----------|-----------|-------|
+| HIGH-001 | HIGH | CORS regex `.*\.vercel\.app` + credentials=True | SEC-01 |
+| HIGH-RLS-001 | HIGH | `clients_update_own` permite escalação de plano via PostgREST | SEC-02 |
+| MEDIUM-001 | MEDIUM | Sem rate limit em /onboarding/message e /start | — |
+| MEDIUM-002 | MEDIUM | /health expõe env + erros de DB sem auth | — |
+| MEDIUM-003 | MEDIUM | meta_access_token plaintext no banco | — |
+| MEDIUM-004 | MEDIUM | Prompt injection em strategy/user_context | — |
+| MEDIUM-005 | MEDIUM | SSRF via push subscription endpoint | — |
+| MEDIUM-RLS-001 | MEDIUM | `content_requests_update_own` sem restrição de colunas via PostgREST | — |

@@ -8,6 +8,7 @@
 *.pem
 tok.json
 *.token.json
+.github-token
 
 # ─── Subrepositórios (têm git próprio — não incluir aqui) ────
 backend/
@@ -28,6 +29,14 @@ logs/
 Thumbs.db
 .idea/
 *.swp
+.cursor/
+.vscode/
+
+# ─── AI Tools (Codex, Gemini, Antigravity, Cerebro) ──────────
+.codex/
+.gemini/
+.antigravity/
+.cerebro-autopost/
 
 # ─── AIOS Local (não commitar) ───────────────────────────────
 .aios-core/local/
