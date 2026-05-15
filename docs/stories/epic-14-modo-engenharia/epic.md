@@ -1,7 +1,8 @@
 # Epic 14 — Modo Engenharia: Alcance Algorítmico
 
-**Status:** In Progress
+**Status:** Done ✅
 **Data de início:** 2026-05-14
+**Data de conclusão:** 2026-05-15
 **Prioridade:** Alta
 
 ## Objetivo
