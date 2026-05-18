@@ -3,24 +3,28 @@
 ## Propósito
 
 Configurar autenticação GitHub automaticamente no início de cada sessão,
-permitindo que @devops execute `git push` sem intervenção manual de Matheus.
+permitindo que @devops execute `git push` sem intervenção manual.
+
+> **Uso em repos privados:** essencial para projetos com código proprietário.
 
 ---
 
-## Quando executar
+## Configuração por projeto
 
-**SEMPRE** — como Passo 4 da Regra 0 (antes do Git Startup Check).
+1. Criar arquivo `{PROJECT_ROOT}\.github-token` com o PAT do GitHub
+2. Adicionar ao `.gitignore` do projeto: `.github-token`
+3. O agente lê o token e configura as credenciais no sandbox
 
 ---
 
-## Protocolo
+## Protocolo de execução
 
-### Passo 1 — Ler o token
+### Passo 1 — Localizar o token
 
-Leia o arquivo `C:\Projetos\autopost\.github-token`.
+Leia o arquivo `.github-token` na raiz do projeto atual.
 
-- Se não existir → avisar discretamente ao final do resumo de sessão e seguir sem push automático
-- Se contiver o placeholder `ghp_COLE_SEU_TOKEN_AQUI` → mesma ação acima
+- Se não existir → avisar discretamente e seguir sem push automático
+- Se contiver o placeholder `ghp_COLE_SEU_TOKEN_AQUI` → mesma ação
 - Se contiver token válido (começa com `ghp_`) → executar Passo 2
 
 ### Passo 2 — Configurar git no sandbox
@@ -51,25 +55,16 @@ Ou se não configurado:
 
 ---
 
-## Arquivo `.github-token`
+## Segurança
 
-- Localização: `C:\Projetos\autopost\.github-token`
-- Conteúdo: apenas o PAT do GitHub (uma linha, começa com `ghp_`)
-- Já está no `.gitignore` — nunca será commitado
-- Para renovar: substituir o conteúdo do arquivo pelo novo token
+- O token fica apenas em memória do sandbox durante a sessão
+- `~/.git-credentials` existe apenas no sandbox Linux isolado
+- O arquivo `.github-token` nunca sai do computador (está no .gitignore)
+- Em caso de comprometimento: revogar o token em https://github.com/settings/tokens
 
-### Como gerar o token
+## Como gerar o token
 
 1. Acesse: https://github.com/settings/tokens
 2. *Generate new token (classic)*
 3. Scope mínimo: `repo`
-4. Cole o token gerado no arquivo `.github-token`
-
----
-
-## Segurança
-
-- O token fica apenas em memória do sandbox durante a sessão
-- ~/.git-credentials existe apenas no sandbox Linux isolado
-- O arquivo .github-token nunca sai do computador de Matheus (está no .gitignore)
-- Em caso de comprometimento: revogar o token em https://github.com/settings/tokens
+4. Cole o token gerado no arquivo `.github-token` na raiz do projeto
