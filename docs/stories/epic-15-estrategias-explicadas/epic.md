@@ -1,6 +1,6 @@
 # Epic 15 — Estratégias Explicadas: UX de Seleção de Conteúdo
 
-**Status:** Draft
+**Status:** Done
 **Data de início:** 2026-06-10
 **Prioridade:** Alta
 **Origem:** Análise arquitetural @aios-master 2026-06-10 — documento de visão de produto

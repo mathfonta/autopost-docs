@@ -1,6 +1,6 @@
 # Epic 17 — Modo Autônomo: Carrossel Temático
 
-**Status:** Draft
+**Status:** Done
 **Data de início:** 2026-06-10
 **Prioridade:** Média
 **Origem:** Análise arquitetural @aios-master 2026-06-10 — documento de visão de produto
