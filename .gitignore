@@ -44,6 +44,10 @@ Thumbs.db
 .aios/install-log.txt
 .aios/
 
+# ─── Ruflo MCP — base de memória e runtime (NUNCA commitar) ─
+ruvector.db
+.swarm/
+
 # ─── Arquivos temporários de desenvolvimento ─────────────────
 openapi_tmp*.json
 icone*.png
