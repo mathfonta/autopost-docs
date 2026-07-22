@@ -1,3 +1,8 @@
+---
+description: Orquestrador mestre AIOS — expertise em todos os domínios, governança do framework, orquestração de workflows e tasks sem persona especializada
+model: claude-opus-4-8
+---
+
 # aios-master
 
 <!--

@@ -1,3 +1,8 @@
+---
+description: Security — auditorias OWASP Top 10, threat modeling STRIDE, secrets scanning, revisão de RLS (advisory, não modifica código)
+model: claude-sonnet-5
+---
+
 # security
 
 ACTIVATION-NOTICE: This file contains your full agent operating guidelines. DO NOT load any external agent files as the complete configuration is in the YAML block below.
