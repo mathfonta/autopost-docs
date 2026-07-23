@@ -1,0 +1,62 @@
+schema: 1
+story: '22.2'
+story_title: 'Agente Scout — síntese de perfil (visão + texto → ScoutReport)'
+gate: PASS
+status_reason: 'Todos os AC1-AC8 implementados e testados. Um problema real de robustez foi encontrado (exceção do PIL não capturada em imagem >4MB corrompida) e corrigido pelo QA no próprio ciclo de review, com teste de regressão dedicado. 328/328 na suíte completa.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-23T09:15:00-03:00'
+
+top_issues:
+  - id: 'REL-001'
+    severity: medium
+    finding: '_compress_image_for_claude() (reusada de analyst.py) chama PIL Image.open() para imagens acima de 4MB, o que pode levantar exceção (imagem corrompida/truncada, resposta HTTP 200 com corpo inválido). Essa chamada, dentro de _analyze_visual_sample, estava fora de qualquer try/except — a única lacuna de robustez em um arquivo que é rigorosamente defensivo em todo o resto. Uma exceção aqui propagaria por analyze_profile() sem ser capturada, violando a garantia da própria AC7.'
+    suggested_action: 'CORRIGIDO NESTE REVIEW: chamada envolvida em try/except por imagem, seguindo o mesmo padrão já usado em _download_image (pula a imagem com falha, não aborta o lote). Teste de regressão adicionado (test_analyze_profile_image_processing_failure_does_not_raise).'
+    suggested_owner: qa
+
+  - id: 'DES-001'
+    severity: low
+    finding: 'AC7 diz literalmente "falha de qualquer modelo → retorna None". A implementação trata falha da etapa de visão como degradação parcial (síntese segue só com texto) em vez de abortar tudo — só falha na síntese final retorna None. Interpretação documentada e defensável (mantém o Scout útil mesmo com uma etapa fora do ar), mas diverge da leitura mais literal do AC.'
+    suggested_action: 'Confirmar com @po se essa interpretação está alinhada com a intenção do epic, e ajustar o texto do AC7 para refletir o comportamento real (assim como o DOC-001 da Story 22.1).'
+    suggested_owner: po
+
+  - id: 'PERF-001'
+    severity: low
+    finding: 'Download das até 6 imagens da amostra visual é sequencial (um await por vez), não paralelo. Timeout de 30s por imagem — pior caso teórico de ~180s se todas falharem por timeout, embora o caminho comum seja rápido.'
+    suggested_action: 'Considerar asyncio.gather() para paralelizar os downloads quando o volume de chamadas do Scout em produção justificar a otimização. Não bloqueia — roda em background (Celery, Story 22.3), não no caminho crítico do usuário.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 90
+expires: '2026-08-06T09:15:00-03:00'
+
+evidence:
+  tests_reviewed: 16
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Nenhum segredo em log. Imagens baixadas vêm de URLs retornadas pela própria API do Instagram (não input arbitrário de usuário) — superfície de SSRF contida, mas sem allowlist de domínio explícito (nota PERF-001-adjacente, não bloqueante).'
+  performance:
+    status: CONCERNS
+    notes: 'Downloads sequenciais das imagens da amostra visual (ver PERF-001) — aceitável para um job em background, mas vale otimizar futuramente.'
+  reliability:
+    status: PASS
+    notes: 'Após a correção do REL-001, todos os caminhos de falha (rede, modelo, JSON malformado, imagem corrompida) são capturados e degradam graciosamente. 100% coberto por teste, incluindo o cenário que motivou a correção.'
+  maintainability:
+    status: PASS
+    notes: 'Boa decomposição em helpers puros e testáveis isoladamente. Reuso de analyst.py sem duplicação nem modificação. Prompts claros com regras explícitas de não-invenção.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Confirmar com @po a interpretação de AC7 sobre falha parcial de visão vs falha total (DES-001)'
+      refs: ['docs/stories/epic-22-agente-scout/22.2.story.md']
+    - action: 'Paralelizar download das imagens da amostra visual com asyncio.gather (PERF-001)'
+      refs: ['backend/app/agents/scout.py']
+    - action: 'Validar o ScoutReport contra uma análise real (Claude/Gemini reais, não mockados) quando a Story 22.3 ligar isso ao fluxo pós-OAuth'
+      refs: ['backend/app/agents/scout.py']
