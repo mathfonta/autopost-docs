@@ -1,0 +1,48 @@
+schema: 1
+story: '22.1'
+story_title: 'Leitura de mídia do Instagram (tool backend)'
+gate: PASS
+status_reason: 'Todos os AC1-AC7 implementados e testados. Lacuna real encontrada durante a revisão (testes não verificavam os parâmetros fields/limit enviados na requisição) foi corrigida pelo QA no próprio ciclo de review — 2 testes novos adicionados, 312/312 na suíte completa.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-22T22:40:00-03:00'
+
+top_issues:
+  - id: 'DOC-001'
+    severity: low
+    finding: 'AC6 documenta a assinatura de fetch_account_info como (access_token: str), mas a implementação real e correta é (ig_id: str, access_token: str) — ig_id é necessário porque o endpoint é {ig_id}, não /me. O código está certo; o texto do AC ficou impreciso.'
+    suggested_action: 'Ajustar o texto do AC6 na story para refletir a assinatura real na próxima passagem de @po/@sm pela story — não bloqueia, é só higiene de documentação.'
+    suggested_owner: po
+
+waiver: { active: false }
+
+quality_score: 100
+expires: '2026-08-05T22:40:00-03:00'
+
+evidence:
+  tests_reviewed: 10
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Token nunca aparece em logs. Sem novo escopo OAuth necessário — instagram_business_basic já concedido. Sem injeção possível (httpx trata encoding de query params).'
+  performance:
+    status: PASS
+    notes: 'Timeout 30s consistente com o resto do codebase. limit=12 contém payload/custo a jusante — agora coberto por teste dedicado.'
+  reliability:
+    status: PASS
+    notes: '100% defensivo: credenciais ausentes, falha de rede, erro #190, resposta malformada — todos retornam []/None sem exceção. Padrão idêntico ao já usado em instagram_analytics.py e exa_search.py.'
+  maintainability:
+    status: PASS
+    notes: 'Segue fielmente os padrões já estabelecidos (app/tools/exa_search.py como molde, _meta_get de instagram_analytics.py para tratamento de erro). Docstrings claras, sem dependência nova.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Validar os campos da API contra um token real de conta conectada (a validação desta story foi feita via documentação oficial da Meta, não via chamada real — já documentado nas Completion Notes pelo próprio @dev)'
+      refs: ['backend/app/tools/instagram_media.py']
+    - action: 'Corrigir a assinatura documentada de fetch_account_info no texto do AC6 da story (DOC-001)'
+      refs: ['docs/stories/epic-22-agente-scout/22.1.story.md']
