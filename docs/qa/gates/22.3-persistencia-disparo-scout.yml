@@ -1,0 +1,56 @@
+schema: 1
+story: '22.3'
+story_title: 'Persistência, merge no brand_profile e disparo pós-OAuth'
+gate: PASS
+status_reason: 'Todos os AC1-AC8 implementados e testados. Análise minuciosa de exceções, transições de status, ordem de argumentos e efeitos colaterais em client.brand_profile não encontrou defeito real — primeira story do epic sem necessidade de correção durante o review. Dois itens informativos de baixa severidade registrados como follow-up.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-23T22:10:00-03:00'
+
+top_issues:
+  - id: 'DES-002'
+    severity: low
+    finding: 'Quando o cliente não tem conexão Instagram ativa no momento da execução (guarda defensiva além do pedido pelas ACs), scout_status vai de pending direto para skipped, sem passar por running. Mesmo padrão de decisão já revisado e endossado na Story 22.2 (DES-001) — semântica razoável (a análise nunca chegou a começar de fato), mas diverge da leitura mais literal de AC7 ("pending → running no início da task").'
+    suggested_action: 'Nenhuma ação necessária — documentar como comportamento intencional, consistente com o DES-001 da 22.2.'
+    suggested_owner: po
+
+  - id: 'CONC-001'
+    severity: low
+    finding: 'Sem proteção contra concorrência: se o mesmo cliente desconectar e reconectar o Instagram rapidamente, duas execuções de run_scout_analysis poderiam rodar em paralelo para o mesmo client_id. O dano prático é baixo (pior caso: scout_insights fica com o resultado de quem commitou por último, não há corrupção nem crash), e não há mecanismo de lock ou deduplicação de task.'
+    suggested_action: 'Não bloqueante para o MVP do epic — considerar um lock por client_id (ex: chave única no Redis) se o padrão de reconexão rápida se mostrar comum em produção.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 95
+expires: '2026-08-06T22:10:00-03:00'
+
+evidence:
+  tests_reviewed: 7
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Nenhum segredo em log (token nunca aparece, só client_id/niche/confidence). str(client.id) usado para serializar UUID no argumento da task Celery — evita problema de serialização de UUID cru.'
+  performance:
+    status: PASS
+    notes: 'Task roda em background (Celery), fora do caminho crítico do onboarding. Reusa fetch_recent_media/analyze_profile já revisados nas Stories 22.1/22.2 (limits e sub-amostras já contêm custo).'
+  reliability:
+    status: PASS
+    notes: 'Dupla camada de proteção contra exceção: a função interna (_run_scout_analysis_async) tem try/except em torno das chamadas de fetch/analyze (que, pelos próprios contratos das Stories 22.1/22.2, nunca deveriam lançar — defesa em profundidade legítima), e o wrapper síncrono da task Celery captura qualquer exceção residual (incluindo uuid.UUID(client_id) malformado ou falha de db.execute) e aciona retry — nunca propaga para fora da task nem quebra o worker.'
+  maintainability:
+    status: PASS
+    notes: 'Segue fielmente o molde de renew_meta_tokens e o padrão testável de _increment_attack_sequence. Comentário específico sobre o cuidado com JSONB/MutableDict é um bom sinal de manutenibilidade — evita que um dev futuro reintroduza um bug de mutação in-place.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Validar o disparo de ponta a ponta com um worker Celery real consumindo a fila (só mockado nos testes até aqui) — já recomendado pelo próprio @dev'
+      refs: ['backend/app/tasks/pipeline.py']
+    - action: 'Considerar lock/deduplicação por client_id se reconexões rápidas se mostrarem comuns (CONC-001)'
+      refs: ['backend/app/tasks/pipeline.py']
+    - action: 'Confirmar com @po a semântica de status no caminho "sem conexão" (DES-002), junto com o DES-001 já pendente da 22.2'
+      refs: ['docs/stories/epic-22-agente-scout/22.3.story.md']
