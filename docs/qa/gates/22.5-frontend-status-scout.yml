@@ -1,0 +1,68 @@
+schema: 1
+story: '22.5'
+story_title: 'Frontend — status "Analisando seu perfil" e sugestão de refino'
+gate: CONCERNS
+status_reason: 'Código correto e bem defensivo (backend e frontend), 2 problemas reais encontrados e corrigidos no próprio review. Gate não é PASS porque a própria story exige "manual-test" no quality_gate_tools, e esse teste genuinamente não foi executado (sem ferramenta de browser leve nem credenciais disponíveis nesta sessão) — honestamente disclosed pelo @dev, mas ainda uma lacuna real da Definition of Done.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-23T22:45:00-03:00'
+
+top_issues:
+  - id: 'MANUAL-001'
+    severity: high
+    finding: 'quality_gate_tools da story lista ["typecheck", "manual-test"] — typecheck está limpo, mas o teste manual em navegador (fluxo completo: conectar → ver indicador → ver sugestão → aceitar/ignorar) não foi realizado. Nem @dev nem @qa tinham ferramenta de browser leve ou credenciais de teste disponíveis nesta sessão. O frontend também não tem NENHUM test runner configurado (sem jest/vitest/testing-library no package.json) — não há alternativa automatizada real para essa verificação.'
+    suggested_action: 'Usuário validar visualmente o fluxo completo (idealmente com uma conta de teste do Instagram real ou simulando os estados via chamadas autenticadas diretas à API) antes de considerar o Epic 22 encerrado. Não bloqueia o push do código — bloqueia a confiança total no comportamento visual até ser confirmado.'
+    suggested_owner: po
+
+  - id: 'UX-001'
+    severity: medium
+    finding: 'O Completion Notes do @dev justificava dispensar o card de sugestão mesmo em caso de FALHA ao aceitar, alegando que "o usuário pode ajustar o segmento depois nas configurações" — mas não existe nenhuma tela de configurações que edite segment neste frontend (confirmado: grep por "segment" em frontend/app não retorna nada). Isso deixava o usuário sem feedback de erro e sem forma de tentar de novo.'
+    suggested_action: 'CORRIGIDO NESTE REVIEW: em caso de falha, exibe toast de erro (reusando o useToast já usado em page.tsx) e MANTÉM o card visível para permitir nova tentativa, em vez de dispensar silenciosamente.'
+    suggested_owner: qa
+
+  - id: 'COPY-001'
+    severity: low
+    finding: 'Quando refined_niche está presente, faltava pontuação entre o nicho e a frase seguinte ("...móveis planejados sob medida Quer usar esse segmento...") — sem separador entre as duas ideias.'
+    suggested_action: 'CORRIGIDO NESTE REVIEW: nicho agora vem entre parênteses com ponto final antes da próxima frase.'
+    suggested_owner: qa
+
+  - id: 'DOC-002'
+    severity: low
+    finding: 'AC2 diz literalmente que o indicador aparece para scout_status "running"/"pending", mas a implementação (decisão correta do próprio @dev, encontrada em autorevisão) só mostra para "running" — "pending" é o default do banco para QUALQUER cliente, inclusive quem nunca conectou o Instagram, então mostrá-lo ali seria enganoso. A decisão está certa; o texto do AC ficou desatualizado. Mesma família dos itens DOC-001 (22.1), DES-001 (22.2), DES-002 (22.3), DES-003 (22.4) — todos pendentes de uma passagem consolidada do @po.'
+    suggested_action: 'Ajustar o texto do AC2 para refletir o comportamento real, junto com os demais itens DOC/DES pendentes do epic.'
+    suggested_owner: po
+
+waiver: { active: false }
+
+quality_score: 80
+expires: '2026-08-06T22:45:00-03:00'
+
+evidence:
+  tests_reviewed: 8
+  risks_identified: 4
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'POST /onboarding/scout/accept ignora corretamente qualquer segmento enviado pelo cliente, lendo só o que já está persistido no banco — testado explicitamente. Boa decisão de design, verificada.'
+  performance:
+    status: PASS
+    notes: 'Polling de 5s por até 60s é um custo desprezível — GET simples, autenticado, sem payload pesado.'
+  reliability:
+    status: CONCERNS
+    notes: 'Lógica revisada linha a linha e parece correta (cleanup de polling, tratamento de erro, nenhum estado bloqueia navegação) — mas sem verificação visual real em navegador, a confiança é por leitura de código, não por observação de comportamento real.'
+  maintainability:
+    status: PASS
+    notes: 'Padrão consistente com o resto do onboarding (useToast, estrutura de useEffect, Tailwind). Comentários explicam decisões não-óbvias (por que "pending" não mostra indicador, por que não há tela de configurações para retry).'
+
+recommendations:
+  immediate:
+    - action: 'Validar visualmente o fluxo completo no navegador (MANUAL-001) antes de considerar o Epic 22 encerrado'
+      refs: ['frontend/components/onboarding/StepComplete.tsx']
+  future:
+    - action: 'Considerar configurar um test runner no frontend (vitest/testing-library) para que stories futuras de UI não dependam só de teste manual'
+      refs: ['frontend/package.json']
+    - action: 'Consolidar os itens DOC-001/DES-001/DES-002/DES-003/DOC-002 numa única passagem do @po pelos textos de AC do Epic 22'
+      refs: ['docs/stories/epic-22-agente-scout/']
