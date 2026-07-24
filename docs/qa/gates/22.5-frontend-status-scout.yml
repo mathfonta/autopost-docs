@@ -1,16 +1,16 @@
 schema: 1
 story: '22.5'
 story_title: 'Frontend — status "Analisando seu perfil" e sugestão de refino'
-gate: CONCERNS
-status_reason: 'Código correto e bem defensivo (backend e frontend), 2 problemas reais encontrados e corrigidos no próprio review. Gate não é PASS porque a própria story exige "manual-test" no quality_gate_tools, e esse teste genuinamente não foi executado (sem ferramenta de browser leve nem credenciais disponíveis nesta sessão) — honestamente disclosed pelo @dev, mas ainda uma lacuna real da Definition of Done.'
+gate: PASS
+status_reason: 'MANUAL-001 resolvido: usuário validou o fluxo completo em produção (autopost.app.br) com uma conexão Instagram real — não simulada. O card de sugestão do Scout renderizou com dado real (ScoutReport genuíno, gerado pela pipeline de visão+síntese), pontuação correta (COPY-001 confirmado), e os dois botões presentes. UX-001 e COPY-001 já haviam sido corrigidos no review original. Único item remanescente é DOC-002 (severidade baixa, textual, não bloqueante).'
 reviewer: 'Quinn (Test Architect)'
-updated: '2026-07-23T22:45:00-03:00'
+updated: '2026-07-24T00:05:00-03:00'
 
 top_issues:
   - id: 'MANUAL-001'
-    severity: high
-    finding: 'quality_gate_tools da story lista ["typecheck", "manual-test"] — typecheck está limpo, mas o teste manual em navegador (fluxo completo: conectar → ver indicador → ver sugestão → aceitar/ignorar) não foi realizado. Nem @dev nem @qa tinham ferramenta de browser leve ou credenciais de teste disponíveis nesta sessão. O frontend também não tem NENHUM test runner configurado (sem jest/vitest/testing-library no package.json) — não há alternativa automatizada real para essa verificação.'
-    suggested_action: 'Usuário validar visualmente o fluxo completo (idealmente com uma conta de teste do Instagram real ou simulando os estados via chamadas autenticadas diretas à API) antes de considerar o Epic 22 encerrado. Não bloqueia o push do código — bloqueia a confiança total no comportamento visual até ser confirmado.'
+    severity: low
+    finding: 'RESOLVIDO — usuário testou o fluxo completo em produção (autopost.app.br) com conexão Instagram real. Resultado: redirect pós-OAuth correto, card de sugestão do Scout renderizado com ScoutReport real (refined_niche, suggested_segment, pontuação), botões presentes. Durante esse teste real, 3 bugs de produção NÃO relacionados ao Epic 22 foram descobertos e corrigidos com autorização direta do usuário (ver nota abaixo) — o teste manual acabou tendo valor adicional além do escopo original da story.'
+    suggested_action: 'Nenhuma — validado. Registrar como aprendizado: o teste manual real revelou problemas de infraestrutura/integração que testes unitários (mesmo se existissem) não pegariam — reforça o valor de pelo menos um passe manual em produção para stories que tocam fluxos de autenticação/redirect.'
     suggested_owner: po
 
   - id: 'UX-001'
@@ -33,8 +33,8 @@ top_issues:
 
 waiver: { active: false }
 
-quality_score: 80
-expires: '2026-08-06T22:45:00-03:00'
+quality_score: 95
+expires: '2026-08-07T00:05:00-03:00'
 
 evidence:
   tests_reviewed: 8
@@ -51,18 +51,25 @@ nfr_validation:
     status: PASS
     notes: 'Polling de 5s por até 60s é um custo desprezível — GET simples, autenticado, sem payload pesado.'
   reliability:
-    status: CONCERNS
-    notes: 'Lógica revisada linha a linha e parece correta (cleanup de polling, tratamento de erro, nenhum estado bloqueia navegação) — mas sem verificação visual real em navegador, a confiança é por leitura de código, não por observação de comportamento real.'
+    status: PASS
+    notes: 'Validado com teste manual real em produção (conexão Instagram real, ScoutReport real) — confiança agora vem de comportamento observado, não só de leitura de código.'
   maintainability:
     status: PASS
     notes: 'Padrão consistente com o resto do onboarding (useToast, estrutura de useEffect, Tailwind). Comentários explicam decisões não-óbvias (por que "pending" não mostra indicador, por que não há tela de configurações para retry).'
 
 recommendations:
-  immediate:
-    - action: 'Validar visualmente o fluxo completo no navegador (MANUAL-001) antes de considerar o Epic 22 encerrado'
-      refs: ['frontend/components/onboarding/StepComplete.tsx']
+  immediate: []
   future:
     - action: 'Considerar configurar um test runner no frontend (vitest/testing-library) para que stories futuras de UI não dependam só de teste manual'
       refs: ['frontend/package.json']
     - action: 'Consolidar os itens DOC-001/DES-001/DES-002/DES-003/DOC-002 numa única passagem do @po pelos textos de AC do Epic 22'
       refs: ['docs/stories/epic-22-agente-scout/']
+
+bugs_encontrados_fora_do_epic_22:
+  descricao: 'Durante o teste manual real desta story, 3 bugs de produção pré-existentes (não relacionados ao Epic 22) foram encontrados e corrigidos com autorização direta do usuário, fora do fluxo formal de stories.'
+  itens:
+    - 'FRONTEND_URL malformada na configuração do Railway (duas URLs concatenadas com espaço) — causava 404 em todo redirect pós-OAuth. Corrigido pelo usuário no painel do Railway.'
+    - 'app/onboarding/page.tsx: checagem de "onboarding já concluído" rodava antes da checagem do retorno do OAuth (?connected=true) — mandava o usuário direto ao /dashboard, tornando a tela StepComplete (e toda a UI do Scout) inalcançável no fluxo real. Commit 5211a31.'
+    - 'components/dashboard/SubStrategySelector.tsx: <button> aninhado em <button>, causando erro de hidratação React no dashboard. Commit d5b350f.'
+    - 'components/onboarding/StepComplete.tsx: copy desatualizado em "Como funciona" (mencionava WhatsApp/API como via principal, quando o fluxo real hoje é upload direto no app). Commit e2714c2.'
+  nota: 'Nenhum desses bugs foi introduzido pelo Epic 22 — mas o item #2 (page.tsx) bloqueava diretamente o valor da Story 22.5, então sua correção foi essencial para a validação real acontecer.'
