@@ -1,0 +1,54 @@
+schema: 1
+story: '22.4'
+story_title: 'Consumo a jusante — copywriter e theme_generator lêem os insights'
+gate: PASS
+status_reason: 'AC1/AC3/AC4/AC5 corretos desde a implementação. AC2 (seleção) tinha um defeito funcional real — comparação por substring da frase inteira quase nunca encontra overlap entre recurring_topics (frases) e tags (palavras soltas) — corrigido pelo QA para comparação por radical de palavra. 353/353 na suíte completa após o fix.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-23T21:20:00-03:00'
+
+top_issues:
+  - id: 'FUNC-001'
+    severity: medium
+    finding: '_theme_relevance_score() comparava a FRASE INTEIRA de cada recurring_topic (ex.: "cozinhas planejadas") contra cada tag (ex.: "planejamento") via substring. Como recurring_topics do Scout são frases de 2+ palavras (contrato da Story 22.2) e as tags do THEME_LIBRARY são palavras soltas, e ainda com inflexões diferentes (planejaDAS vs planejaMENTO), essa comparação praticamente nunca encontrava overlap real — o teste original da própria story só passava porque usava dados de teste artificialmente favoráveis (tópicos de 1 palavra idênticos às tags). Na prática, a reordenação de temas (AC2, metade "seleção") ficaria quase sempre inerte mesmo com scout_insights presente e relevante.'
+    suggested_action: 'CORRIGIDO NESTE REVIEW: comparação mudada para nível de palavra, usando um radical aproximado de 6 caracteres (tolera inflexões comuns do português). Dois testes de regressão adicionados com dados realistas (frases multi-palavra) que teriam falhado com a implementação original.'
+    suggested_owner: qa
+
+  - id: 'DES-003'
+    severity: low
+    finding: 'O radical de 6 caracteres é uma heurística simples, não um stemmer real — pode ocasionalmente não capturar relações semânticas mais distantes (sinônimos, palavras compostas) ou, mais raramente, capturar falsos positivos entre palavras que só coincidem no prefixo por acaso.'
+    suggested_action: 'Aceitável para o MVP do epic — não bloqueante. Se a qualidade da reordenação se mostrar insatisfatória em uso real, considerar uma lib de stemming em português (ex. NLTK RSLP) numa story futura.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 90
+expires: '2026-08-06T21:20:00-03:00'
+
+evidence:
+  tests_reviewed: 18
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Nenhum dado sensível envolvido — só texto de tema e tópicos recorrentes, sem tokens nem PII.'
+  performance:
+    status: PASS
+    notes: 'Operações de string em conjuntos pequenos (poucos temas por segmento, poucas tags por tema) — custo desprezível.'
+  reliability:
+    status: PASS
+    notes: 'Os três pontos de injeção (copywriter, theme_generator, list_themes) são defensivos e testados contra scout_insights ausente/vazio/malformado/tipo errado. AC3 (zero regressão sem Scout) é garantido estruturalmente pela própria fórmula de relevância retornar 0.'
+  maintainability:
+    status: PASS
+    notes: 'Padrão consistente nos três arquivos (bloco condicional que constrói uma seção/score e só then se anexa). Comentário explica o PORQUÊ da comparação por radical, não só o quê — ajuda o próximo dev a não reintroduzir a comparação por frase inteira.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Avaliar qualidade real da reordenação de temas em produção; considerar stemming de verdade se o radical de 6 chars se mostrar insuficiente (DES-003)'
+      refs: ['backend/app/api/insights.py']
+    - action: 'Confirmar com @po se falta piso de confidence para a injeção nos prompts (decisão de pre-flight foi não implementar) — mesma família dos DES-001/DES-002 pendentes'
+      refs: ['docs/stories/epic-22-agente-scout/22.4.story.md']
