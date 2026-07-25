@@ -1,0 +1,46 @@
+schema: 1
+story: '12.4'
+story_title: 'Aviso e tratamento de erro para conta Instagram não-profissional'
+gate: CONCERNS
+status_reason: 'Implementação completa e correta por leitura de código: todos os 8 ACs verificados diretamente no código-fonte (não só no relato do @dev). Testes automatizados passam integralmente (18/18 em test_meta_oauth.py, incluindo o teste novo do caminho de erro; typecheck do frontend limpo). Único item pendente é MANUAL-001: o próprio @dev registrou não ter testado em navegador real, e o fluxo toca OAuth/redirect — categoria que, por aprendizado registrado na Story 22.5 deste mesmo projeto, historicamente esconde bugs de infraestrutura (env vars, ordem de checagem no useEffect) que só aparecem em teste manual real, não em revisão de código ou testes unitários.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-24T00:00:00-03:00'
+
+top_issues:
+  - id: 'MANUAL-001'
+    severity: medium
+    finding: 'Fluxo de erro do OAuth (redirect com connected=false&error=... e o toast correspondente) nunca foi exercitado em navegador real contra o backend/frontend rodando de verdade — só via pytest (mock do exchange de token) e tsc --noEmit (checagem de tipos). O AC-alvo (usuário com conta pessoal do Instagram tentando conectar) é justamente o caso que só se comprova ao vivo.'
+    suggested_action: 'Antes de considerar a story 100% fechada: testar manualmente em produção ou staging com uma conta Instagram pessoal (não-profissional) tentando conectar, confirmando que (a) o aviso preventivo aparece antes do clique, (b) o erro real da Meta cai no bloco try/except e redireciona com connected=false&error=..., (c) o toast de erro aparece na tela certa sem quebrar o onboarding. Não é obrigatório para o gate PASS, mas recomendado dado o histórico de bugs de infra em fluxos OAuth deste projeto (ver Story 22.5).'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 88
+expires: '2026-08-07T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 18
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Mensagem de erro exposta ao usuário é genérica por design (AC5) — detalhe real da falha só vai para logger.error no backend, nunca para a URL de redirect nem para o cliente. Sem dangerouslySetInnerHTML no toast (React escapa o texto automaticamente), sem risco de XSS refletido via query param. frontend_url do redirect vem de settings (não é user-controlled), sem risco de open redirect.'
+  performance:
+    status: PASS
+    notes: 'Nenhum custo adicional relevante — um bloco try/except a mais e um branch de query param a mais, replicando padrão já existente.'
+  reliability:
+    status: CONCERNS
+    notes: 'Cobertura por teste automatizado é sólida (mock do respx simula falha de token, valida redirect e query params). Mas comportamento real em produção contra a API real da Meta com uma conta pessoal genuína ainda não foi observado — ver MANUAL-001.'
+  maintainability:
+    status: PASS
+    notes: 'Segue exatamente o padrão já usado no onboarding para o caso de sucesso (searchParams.get + toast) — nenhuma abstração nova, comentário explica por que a checagem de erro está fora do escopo de state JWT inválido (AC4).'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Validar manualmente o fluxo de erro com conta pessoal real antes do próximo beta test, seguindo o mesmo padrão de validação que fechou a Story 22.5'
+      refs: ['frontend/app/onboarding/page.tsx', 'backend/app/api/meta.py']
