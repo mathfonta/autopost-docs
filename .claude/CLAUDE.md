@@ -43,6 +43,19 @@ Executar ao inicio de sessão para garantir visibilidade do estado dos repositó
 
 ---
 
+## Retomada de Sessão (`resume` / `*retomar`)
+
+Quando o usuário der `resume` ou `*retomar` (com ou sem agente ativo), executar nesta ordem antes de qualquer outra coisa:
+
+1. **Ler `docs/SESSAO-HANDOFF.md`** — ponto de retomada: onde paramos e as pendências abertas.
+2. **Ler `docs/plano-mestre-2026-07.md`** — doc de implementação (foco na seção "Reconciliação" mais recente).
+3. Executar o **Git Startup Check** (seção acima) nos 3 repos (docs, backend, frontend).
+4. Apresentar ao usuário um resumo do handoff + a lista de pendências e perguntar qual atacar. **Não executar nenhuma pendência sem aprovação explícita** (ver `feedback-one-at-a-time-approval` na memória).
+
+**Ao FECHAR uma sessão de trabalho:** sobrescrever `docs/SESSAO-HANDOFF.md` com o estado atual (onde paramos + pendências reais + estado dos repos). O arquivo é sempre o estado corrente, não histórico.
+
+---
+
 <!-- AIOS-MANAGED-START: core-framework -->
 ## Core Framework Understanding
 

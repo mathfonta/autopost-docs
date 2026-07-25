@@ -2,7 +2,7 @@
 
 **ID:** SEC-01
 **Epic:** Security
-**Status:** Ready
+**Status:** Done
 **Prioridade:** HIGH — deve ser feito antes do lançamento público
 **Criada por:** @security (Sage) — autoridade direta conforme aprovação Matheus 2026-04-25
 **Data:** 2026-05-05

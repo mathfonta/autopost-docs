@@ -1,7 +1,9 @@
 # 🗺️ Plano Mestre AutoPost — Diagnóstico e Melhorias
 
-> **Data:** 2026-07-07 · **Autor:** @aios-master (Orion) · **Status:** PLANEJADO — nada executado
+> **Data:** 2026-07-07 · **Autor:** @aios-master (Orion) · **Status:** PARCIALMENTE EXECUTADO — ver Reconciliação 2026-07-24 no fim do documento
 > **Propósito:** documento de referência para implementação posterior via SDC (`@pm *create-epic` → `@sm *draft` → `@po *validate` → `@dev *develop` → `@qa *qa-gate` → `@devops *push`)
+>
+> ⚠️ **ATENÇÃO (2026-07-24):** a numeração de epics deste plano NÃO corresponde mais à realidade. O slot **Epic 22** foi usado para o **Agente Scout** (não para "Refatoração" como planejado), e os epics 19/20/23/24/25/26 nunca foram criados. Leia a seção "Reconciliação 2026-07-24" antes de usar este documento para planejar.
 
 ---
 
@@ -285,3 +287,42 @@ FASE 4 (pós-launch)   → Epic 20 Biblioteca de fotos · Epic 26 Boost pago
 | Data | Autor | Mudança |
 |------|-------|---------|
 | 2026-07-07 | @aios-master (Orion) | Documento criado a partir do diagnóstico completo da sessão |
+| 2026-07-24 | @aios-master (Orion) | Reconciliação do plano com o estado real do código após ~2,5 semanas — ver seção "Reconciliação 2026-07-24" |
+
+---
+
+## Reconciliação 2026-07-24
+
+> Confronto do plano (2026-07-07) com o estado real do repositório em 2026-07-24. **Divergência estrutural:** o projeto seguiu parcialmente o plano e depois tomou outro rumo — o slot Epic 22 virou **Agente Scout**, não "Refatoração", e os epics 19/20/23/24/25/26 propostos nunca foram criados.
+
+### O que foi entregue desde o plano
+
+- ✅ **Epic 21 — Copy-Chief:** stories 21.1 e 21.2 concluídas (Done).
+- ✅ **Epic 22 — Agente Scout** (NÃO previsto no plano; o plano reservava o 22 para Refatoração): 5 stories (22.1–22.5) concluídas, gates PASS, validado em produção com dado real.
+- ✅ **Story 12.4** — aviso e tratamento de erro de OAuth para conta Instagram não-profissional (fora do escopo deste plano; gate PASS, validado manualmente).
+- ✅ **0.2 Obsidian** — atualizado (já registrado como feito no plano original).
+
+### Status real dos itens do plano
+
+| Item do plano | Status em 2026-07-24 | Evidência |
+|---|---|---|
+| 0.1 Meta App Review | 🟡 Bloqueado no usuário | Doc `docs/meta-app-review-resubmissao.md` existe; falta gravar os vídeos de demonstração do App Review |
+| 0.3 Analytics 5 eventos | 🟡 Parcial (2/5) | Infra pronta (`core/analytics.py`, `lib/analytics.ts`, `PosthogProvider`); emitindo só `post_created` e `post_published`; faltam `post_approved`, `upgrade_clicked`, `churn` |
+| Epic 21 Copy-Chief | ✅ Done | 21.1 + 21.2 |
+| Epic 25 Modelos LLM | 🔴 Não feito | `copywriter.py:24` e outros ainda em `claude-sonnet-4-6`; `analyst.py:29` em `claude-haiku-4-5`; sem centralização em `config.py`. Sonnet 5 / Opus 4.8 já disponíveis |
+| Epic 19 Agendamento | 🔴 Não criado | — |
+| Epic 23 Score | 🔴 Não criado | — |
+| Epic 24 Mix Editorial | 🔴 Não criado | — |
+| Epic 22 Refatoração | 🔴 Não feito (slot usado p/ Scout) | B1: `pipeline.py` cresceu p/ 1091 linhas; B4: `redis.py` + `redis_client.py` ainda coexistem; B6: `icone autopost.png`, `openapi_tmp2.json`, `ruvector.db` ainda na raiz |
+| Epic 20 Biblioteca | 🔴 Não criado | — |
+| Epic 26 Boost | 🔴 Não criado | — |
+
+### Renumeração recomendada para uso futuro
+
+Como o 22 foi consumido pelo Scout, os epics ainda-a-criar deste plano precisam de **novos números** ao serem formalizados via `@pm *create-epic`. Não reaproveitar 19–26 do plano sem antes checar colisão com o que já existe no repo (`docs/stories/`).
+
+### Itens do plano que seguem válidos e de alto valor (2026-07-24)
+
+1. **0.3 Analytics** — a 3 eventos de completar; pré-requisito declarado "antes de escalar". Baixo esforço.
+2. **Epic 25 Modelos LLM** — modelos no código estão uma geração atrás; revisitar à luz do ADR de roteamento LLM (a decisão Gemini-volume/Claude-análise pode mudar com Sonnet 5).
+3. **Meta Review (0.1)** — maior bloqueador de negócio; gargalo atual é gravar os vídeos, não código.
