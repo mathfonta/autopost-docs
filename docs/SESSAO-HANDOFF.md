@@ -45,7 +45,7 @@ Ordem de prioridade — próximos alvos de produto:
 ### 5. Backlog de valor (ainda não priorizado)
 - **0.3 Analytics PostHog** — só 2/5 eventos emitem (`post_created`, `post_published`); faltam `post_approved`, `upgrade_clicked`, `churn`. Infra já pronta.
 - **Epic 25 — Modelos LLM** — código ainda em `claude-sonnet-4-6` / `claude-haiku-4-5`; Sonnet 5 / Opus 4.8 disponíveis. Revisitar à luz do ADR de roteamento LLM.
-- **Story 6.3** — gap do PostCard multi-foto (ver pendência 1).
+- **Thumbnail de vídeo no PostCard** — descoberto em 2026-07-25 (usuário notou ao revisar a 6.3): posts de vídeo (Reels/Story) mostram uma tela preta com ícone de play no card, sem nenhum frame/preview do vídeo. Diferente do gap do multi-foto, aqui o dado nem existe — `ContentRequest` não tem campo de thumbnail/poster. Precisa: (a) backend extrair um frame do vídeo (ffmpeg) e salvar no R2, (b) expor no schema, (c) frontend trocar a tela preta pela imagem. Não é 1-linha — vira uma story pequena própria.
 
 ---
 

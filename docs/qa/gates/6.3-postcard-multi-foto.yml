@@ -1,0 +1,55 @@
+schema: 1
+story: '6.3'
+story_title: 'Frontend Multi-Foto (escopo reduzido: PostCard multi-foto)'
+gate: CONCERNS
+status_reason: 'Escopo desta revisão é apenas o gap real fechado (AC6, PostCard exibindo múltiplas fotos) — os ACs 1/2/3/5/7/8/9 correspondem a funcionalidade pré-existente em produção por uma arquitetura diferente da que a story original descrevia (confirmado por leitura de código em UploadScreen.tsx, app/dashboard/page.tsx e lib/post-types.tsx nesta mesma sessão), e AC4 (Antes/Depois) ficou fora de escopo por decisão explícita do usuário. Código novo (MultiPhotoStrip + PhotoCarouselModal em PostCard.tsx) está correto e bem construído, mas nunca foi exercitado em navegador real — só validado por tsc/build. Único item aberto é a checagem visual.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-25T00:00:00-03:00'
+
+top_issues:
+  - id: 'MANUAL-001'
+    severity: low
+    finding: 'MultiPhotoStrip e PhotoCarouselModal nunca foram vistos rodando em navegador real — só validados por tsc --noEmit e next build. Risco realista é baixo (é lógica de renderização client-side pura, sem OAuth/redirect/env var envolvido — categoria de risco diferente da que já mordeu este projeto na Story 22.5), mas vale conferir visualmente: grid 3 colunas não esmagar em telas pequenas, indicador "+N" legível, setas do modal com área de toque confortável no mobile.'
+    suggested_action: 'Antes do beta test da semana que vem: abrir um post de carrossel real (2+ fotos) em produção ou local e conferir a faixa de thumbnails no card + o modal de tela cheia com navegação ← →. Não bloqueante para o gate.'
+    suggested_owner: dev
+
+  - id: 'INFO-001'
+    severity: low
+    finding: 'Investigação de QA encontrou que PostCard é usado em exatamente 1 lugar no app inteiro (app/dashboard/page.tsx:513), sempre com a prop onOpen (só para posts em awaiting_approval). Isso significa que os branches de renderização para isFailed/isRejected/published/"Gerando conteúdo…" (linhas 200-224 do componente) são código não-alcançável hoje — não é uma regressão desta story, é uma condição pré-existente no código. Investigação também descartou uma preocupação inicial: o clique na imagem para posts multi-foto agora abre o carrossel em vez de chamar onOpen, mas como sempre existe a linha "Toque para revisar" abaixo (que também chama onOpen), não há perda de funcionalidade no único caminho real de uso.'
+    suggested_action: 'Nenhuma ação necessária — registrado para conhecimento. Se PostCard for reutilizado no futuro para outros status (published/failed) fora do fluxo de aprovação, revisitar o comportamento de clique.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 90
+expires: '2026-08-08T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 2
+  trace:
+    ac_covered: [6, 7, 9]
+    ac_gaps: [4]
+    ac_pre_existing_not_reverified_in_full: [1, 2, 3, 5, 8, 10]
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Nenhum dangerouslySetInnerHTML; URLs de foto são as mesmas já usadas em outros pontos do app (R2 presigned), nenhuma nova superfície de risco. Sem input de usuário renderizado como HTML.'
+  performance:
+    status: PASS
+    notes: 'Custo desprezível — no máximo 3 <img> adicionais por card multi-foto; modal só monta quando aberto (carouselIndex !== null).'
+  reliability:
+    status: CONCERNS
+    notes: 'Código correto por leitura, mas nunca observado rodando de fato — ver MANUAL-001. Categoria de risco é baixa (UI pura, sem integração externa).'
+  maintainability:
+    status: PASS
+    notes: 'Componentes pequenos e isolados (MultiPhotoStrip, PhotoCarouselModal), seguem convenções já usadas no arquivo (mesmo padrão de ícones lucide-react, mesma estrutura de classes Tailwind). stopPropagation usado corretamente nos controles internos do modal para não fechar ao clicar neles.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Conferir visualmente em produção antes do beta test da semana que vem (MANUAL-001)'
+      refs: ['frontend/components/dashboard/PostCard.tsx']
+    - action: 'Se/quando existir um novo local de uso de PostCard fora do fluxo de aprovação, revisitar o comportamento de clique multi-foto vs onOpen'
+      refs: ['frontend/components/dashboard/PostCard.tsx']
