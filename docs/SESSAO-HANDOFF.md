@@ -3,7 +3,7 @@
 > **Propósito:** ponto de retomada do projeto. Ao dar `resume` ou `*retomar`, o agente lê ESTE arquivo + o doc de implementação (`docs/plano-mestre-2026-07.md`) para saber onde paramos.
 > **Como manter:** este arquivo é sobrescrito ao FECHAR cada sessão de trabalho, refletindo as pendências reais do momento. Não é histórico — é sempre o estado atual.
 
-**Última atualização:** 2026-07-26 · sessão de resposta a incidente pós-Epic 19 + preparação do beta test
+**Última atualização:** 2026-07-26 · sessão de resposta a incidente pós-Epic 19 + Epic 25 (modelos LLM) + Epic 27 (inteligência multi-nicho) via Spec Pipeline
 
 ---
 
@@ -15,8 +15,10 @@
 4. **Thumbnail de vídeo implementado** — posts de reels/story agora mostram um frame real do vídeo em vez de tela preta, nos 3 lugares onde apareciam (card de aprovação, publicações recentes, agendados).
 5. **Bookkeeping de stories** — Story 4.4 corrigida para Done (estava presa em "Ready for Review" por esquecimento, mas está em produção e uso contínuo há meses).
 6. **Roteiro completo do beta test pronto** — `docs/roteiro-beta-colega.md`: mensagem para enviar, explicação do app, passo a passo de instalação (PWA, iOS/Android), motivo do tester Meta, roteiro de feedback, e cronograma separado para admin (você) e para o colega.
+7. **Epic 25 (Modelos LLM) Done** — `claude-sonnet-4-6` → `claude-sonnet-5` em 5 arquivos do backend. Gate PASS (100). Ver `docs/stories/epic-25-modelos-llm/`.
+8. **Epic 27 (Inteligência de mercado multi-nicho) Done** — 3/3 stories, gates PASS (100, 100, 95). `/insights/weekly` não serve mais dado de "Construção civil" para clientes de outro segmento; queries/prompts do produtor generalizados via Gemini Flash; fan-out por segmento distinto ativo com guardrail de custo e isolamento de falha. Passou pelo Spec Pipeline completo (6 fases) antes de virar stories. Ver `docs/stories/epic-27-intel-multinicho/`.
 
-Todos os commits desta sessão estão pushed e os 3 repos (docs/backend/frontend) sincronizados com o remoto.
+Todos os commits desta sessão estão pushed e os repos (docs/backend) sincronizados com o remoto.
 
 ---
 
@@ -26,21 +28,23 @@ Todos os commits desta sessão estão pushed e os 3 repos (docs/backend/frontend
 `docs/roteiro-beta-colega.md` está pronto. Antes de enviar, siga a Parte 1 do cronograma "Admin" dentro do documento (pegar @ do Instagram do colega, adicionar como Tester na Meta, confirmar app no ar).
 
 ### 2. Story 6.3 (PostCard multi-foto) — checagem visual real ainda não feita
-Achado na revisão desta sessão: `docs/qa/gates/6.3-postcard-multi-foto.yml` continua com gate **CONCERNS** (não PASS) e a Story com Status **"Ready for Review"** (não Done) — o item MANUAL-001 (ver funcionando de verdade em navegador real, com múltiplas fotos) nunca foi confirmado. Baixo risco (é renderização client-side pura), mas é a única pendência real de QA em aberto no projeto. Recomendado fechar antes ou durante o beta test: abrir o dashboard com um post de carrossel/múltiplas fotos e conferir a faixa de thumbnails + o carrossel em tela cheia.
+`docs/qa/gates/6.3-postcard-multi-foto.yml` continua com gate **CONCERNS** (não PASS) e a Story com Status **"Ready for Review"** (não Done) — o item MANUAL-001 (ver funcionando de verdade em navegador real, com múltiplas fotos) nunca foi confirmado. Baixo risco (é renderização client-side pura), mas é a única pendência real de QA em aberto no projeto. Recomendado fechar antes ou durante o beta test: abrir o dashboard com um post de carrossel/múltiplas fotos e conferir a faixa de thumbnails + o carrossel em tela cheia.
 
 ### 3. Meta App Review / InstagramAnalyticsCard (bloqueado no usuário)
 Ainda precisa gravar os vídeos de demonstração exigidos pelo App Review. Não é tarefa de código.
 
-### 4. Planejamento futuro — Inteligência de mercado (Exa) multi-nicho (escopo grande)
-`pipeline.generate_weekly_intelligence` está hardcoded para "construção civil" — não gera nada para outros segmentos de cliente. Não implementar direto: passar por `@pm *create-epic` + `@architect` (custo/viabilidade de Exa por segmento) antes de detalhar stories. Detalhes completos em [[project_pending_items]].
+### 4. Gate operacional do Epic 27 — antes de habilitar Exa multi-segmento em produção
+Epic 27 está Done no código, mas `EXA_PROVIDER=exa` com fan-out por segmento ainda não deve ser ligado sem: (a) confirmar o N real de segmentos distintos ativos em produção (Supabase estava sem token de acesso durante o planejamento — CON-3), e (b) setar `MAX_SEGMENTS_PER_RUN` explicitamente no Railway (guardrail de custo). Detalhes em `docs/stories/epic-27-intel-multinicho/epic.md`.
 
-### 5. Backlog de valor (não priorizado)
-- Analytics PostHog incompleto (faltam `post_approved`, `upgrade_clicked`, `churn`)
-- ~~Epic 25 — atualizar modelos LLM~~ → **Done** (2026-07-26, story 25.1, gate PASS 100 — ver `docs/stories/epic-25-modelos-llm/`). Commit local pendente de push (@devops).
+### 5. Epic 28 — análise de concorrentes + re-análise do Scout (planejamento futuro)
+Escopo que ficou de fora do Epic 27 no split do `@architect`: análise de concorrentes por segmento (capacidade nova, maior risco/incerteza — precisa de Research própria sobre como extrair sinal via Exa) e re-análise periódica do Agente Scout. Não implementar direto — precisa de spec pipeline próprio.
+
+### 6. Backlog de valor (não priorizado)
+- Analytics PostHog incompleto (faltam `upgrade_clicked`, `churn` — `post_approved` já existe, achado ao investigar nesta sessão)
 - Epic 23/24 (Score de engajamento, Mix editorial) — não iniciados
 - Limpeza de clientes de teste acumulados no banco de produção
 
-### 6. Nota informativa (não bloqueante) — 3 gates antigos com CONCERNS de baixa severidade
+### 7. Nota informativa (não bloqueante) — 3 gates antigos com CONCERNS de baixa severidade
 `docs/qa/gates/2.3-agente-designer.yml`, `2.6-api-conteudo.yml`, `2.7-oauth-meta.yml` (todos de abril/2026, severidade "low", código estável em produção desde então). Não requer ação — só registrado para não ser confundido com pendência nova numa auditoria futura.
 
 ---
@@ -50,7 +54,7 @@ Ainda precisa gravar os vídeos de demonstração exigidos pelo App Review. Não
 | Repo | Branch | Estado |
 |------|--------|--------|
 | autopost-docs (docs) | master | commit deste handoff pendente de push (será feito ao fechar) |
-| autopost-backend (backend) | main | ✅ sincronizado — `e33b63e`, deploy saudável |
+| autopost-backend (backend) | main | commits do Epic 27 (27.1/27.2/27.3) pendentes de push (será feito ao fechar) |
 | autopost-frontend (frontend) | main | ✅ sincronizado — `aa181a2`, deploy saudável, validado pelo usuário |
 
 ## 🚨 Incidentes desta sessão (resumo — detalhes completos em [[project_epic19_deploy_incidents]])
@@ -70,4 +74,20 @@ Ainda precisa gravar os vídeos de demonstração exigidos pelo App Review. Não
 | 19.4 (frontend — botão Agendar) | Done | PASS (95) — validado em produção real |
 | 19.5 (frontend — tela de agendados) | Done | PASS (96) — validado em produção real |
 
-**Próxima decisão de prioridade:** enviar o beta test (pendência 1) é o caminho mais natural agora que a Story 6.3 é o único item de QA realmente em aberto. O item 4 (inteligência multi-nicho) fica para depois do beta, por decisão do usuário.
+## 📦 Epic 25 — status final
+
+| Story | Status | Gate |
+|---|---|---|
+| 25.1 (model IDs Sonnet 4.6 → 5) | Done | PASS (100) |
+
+## 📦 Epic 27 — status final
+
+| Story | Status | Gate |
+|---|---|---|
+| 27.1 (fix `/weekly` + matching normalizado) | Done | PASS (100) |
+| 27.2 (queries/prompts por segmento — produtor) | Done | PASS (100) |
+| 27.3 (fan-out por segmento + guardrail + dedup) | Done | PASS (95) |
+
+Suíte de testes backend: **416 testes, 0 falhas** (era 398 no início da sessão).
+
+**Próxima decisão de prioridade:** enviar o beta test (pendência 1) é o caminho mais natural agora que a Story 6.3 é a única pendência real de QA em aberto no projeto. O gate operacional do Epic 27 (pendência 4) e o Epic 28 (pendência 5) ficam para quando houver mais tempo dedicado a planejamento.

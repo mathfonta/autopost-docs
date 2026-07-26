@@ -1,6 +1,6 @@
 # Epic 27 — Inteligência de Mercado Multi-Nicho
 
-**Status:** Em execução (1/3 stories Done)
+**Status:** Concluído (3/3 stories Done)
 **Criado:** 2026-07-26
 **Owner:** @pm (Morgan) · Arquitetura: @architect (Aria)
 **Origem:** Backlog de valor (item 5) — generalização do Epic 13 (Exa Intelligence), cuja Story 13.4 nasceu hardcoded para "Construção civil".
@@ -23,8 +23,8 @@ A inteligência de mercado semanal (Exa) só existe para "Construção civil". T
 | Story | Título | Rastreia | Risco | Depende | Status |
 |-------|--------|----------|-------|---------|--------|
 | 27.1 | Fix do consumidor `/weekly` + normalização | FR-5, NFR-4/5 | Baixo | — | Done (gate PASS 100) |
-| 27.2 | Queries e prompts por segmento (produtor) | FR-2/3/4 | Médio | — | Draft |
-| 27.3 | Fan-out do weekly intelligence por segmento | FR-1/6, NFR-1/2/3 | Médio | 27.2 | Draft |
+| 27.2 | Queries e prompts por segmento (produtor) | FR-2/3/4 | Médio | — | Done (gate PASS 100) |
+| 27.3 | Fan-out do weekly intelligence por segmento | FR-1/6, NFR-1/2/3 | Médio | 27.2 | Done (gate PASS 95) |
 
 **Sequência:** 27.1 → 27.2 → 27.3.
 
@@ -51,4 +51,10 @@ A inteligência de mercado semanal (Exa) só existe para "Construção civil". T
 
 ## Próximo passo
 
-`@sm *draft` da Story 27.1. Fluxo SDC normal a partir daí (@sm → @po → @dev → @qa → @devops). Planejamento (@sm/@po) segue em Opus; implementação (@dev) troca para Sonnet.
+Epic 27 concluído. O valor central está entregue: cada segmento ativo de cliente gera sua própria inteligência de mercado semanal (tendências, hashtags, horário sugerido), em vez de todos receberem dado de "Construção civil".
+
+**Antes de habilitar `EXA_PROVIDER=exa` com fan-out em produção (gate operacional, @devops):**
+- Confirmar N real de segmentos ativos (CON-3, pendente desde o planejamento).
+- Setar `MAX_SEGMENTS_PER_RUN` explicitamente no Railway.
+
+**Próximo epic:** Epic 28 (análise de concorrentes + re-análise periódica do Scout — FR-7/FR-8) precisa de spec pipeline próprio.

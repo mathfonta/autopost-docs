@@ -1,0 +1,48 @@
+schema: 1
+story: '27.3'
+story_title: 'Fan-out do weekly intelligence por segmento'
+gate: PASS
+status_reason: 'generate_weekly_intelligence virou dispatcher: consulta segmentos distintos de clientes ativos (_get_active_segments, dedup normalizado), aplica guardrail MAX_SEGMENTS_PER_RUN antes de qualquer chamada Exa, e processa cada segmento isoladamente (try/except por segmento — falha não aborta os demais). _save_weekly_context agora deduplica o upsert por (week_of, segmento normalizado), fechando o CRIT-1 do critique.json do Epic 27. Fecha o valor central do epic: cada segmento ativo passa a gerar sua própria inteligência de mercado, não mais um único registro global de "Construção civil". 7 testes novos cobrindo fan-out, isolamento de falha, guardrail e dedup. Suíte completa: 416 passed, 0 failed.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-26T00:00:00-03:00'
+
+top_issues:
+  - id: 'REFACTOR-001'
+    severity: low
+    finding: 'normalize_segment foi extraído de insights.py para app/core/segment.py durante esta story — fora do escopo formal da story (que previa isso como opcional: "avaliar extrair... se a duplicação incomodar"), mas justificado no Completion Notes (elimina risco de divergência entre normalizador do consumidor e do produtor).'
+    suggested_action: 'Nenhuma ação necessária — refatoração de baixo risco, coberta por testes existentes (test_themes.py) que continuam passando via reexport, mais os novos testes de app.core.segment indiretamente via _get_active_segments/_save_weekly_context.'
+    suggested_owner: none
+
+waiver: { active: false }
+
+quality_score: 95
+expires: '2026-08-09T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 416
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'NFR isolamento multi-tenant preservado — cada segmento processado independentemente, sem cruzamento de dados entre clientes de segmentos diferentes.'
+  performance:
+    status: PASS
+    notes: 'NFR-1 (custo Exa): guardrail MAX_SEGMENTS_PER_RUN aplicado ANTES de qualquer chamada Exa (confirmado no código, foco CodeRabbit da story), priorizando segmentos com mais clientes ativos quando há corte.'
+  reliability:
+    status: PASS
+    notes: 'NFR-2 (isolamento de falha): confirmado por teste dedicado — falha de Exa num segmento não impede a persistência dos demais. NFR-3 (fallback gracioso): preservado, "sem snippets mas com horário" continua persistindo honestamente. NFR-6 (EXA_PROVIDER=disabled): confirmado, dispatcher nem chega a consultar segmentos ativos.'
+  maintainability:
+    status: PASS
+    notes: 'Extração de normalize_segment elimina duplicação de lógica entre consumidor (27.1) e produtor (27.3) — REUSE genuíno. _get_active_segments e _collect_for_segment são funções pequenas e testáveis isoladamente.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Gate operacional antes de habilitar EXA_PROVIDER=exa em produção com fan-out: confirmar N real de segmentos ativos (CON-3, pendente desde o planejamento — Supabase indisponível na sessão de spec) e setar MAX_SEGMENTS_PER_RUN explicitamente no Railway.'
+      refs: ['docs/stories/epic-27-intel-multinicho/spec/complexity.json', 'docs/stories/epic-27-intel-multinicho/epic.md']
+    - action: 'Epic 27 completo (3/3 stories Done) — próximo passo é o Epic 28 (análise de concorrentes + re-análise Scout), que precisa de spec pipeline próprio.'
+      refs: ['docs/stories/epic-27-intel-multinicho/spec/complexity.json']

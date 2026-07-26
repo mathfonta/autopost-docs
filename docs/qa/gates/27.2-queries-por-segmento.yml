@@ -1,0 +1,41 @@
+schema: 1
+story: '27.2'
+story_title: 'Queries e prompts de inteligência por segmento (produtor)'
+gate: PASS
+status_reason: 'Generalização limpa do produtor: _generate_segment_queries (Gemini Flash + fallback template determinístico), prompts de _summarize_snippets e _extract_suggested_time parametrizados por segmento, _CONTENT_TYPE_QUERIES sem termos fixos de construção civil. generate_weekly_intelligence fiado nas novas funções (segmento ainda fixo — fan-out é a Story 27.3), sem código órfão. 9 testes novos cobrindo geração via Gemini, fallback em 3 cenários de falha, e ausência de viés de nicho. Suíte completa: 409 passed, 0 failed.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-26T00:00:00-03:00'
+
+top_issues: []
+
+waiver: { active: false }
+
+quality_score: 100
+expires: '2026-08-09T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 409
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Sem superfície de ataque nova — geração de query via LLM com fallback determinístico, sem input de usuário não sanitizado no prompt (segmento vem de brand_profile já validado no onboarding).'
+  performance:
+    status: PASS
+    notes: 'Fan-out é semanal (Celery Beat), não por-post — +1 chamada Gemini Flash por execução é custo desprezível (NFR-1, mesma análise do complexity.json).'
+  reliability:
+    status: PASS
+    notes: 'Fallback gracioso testado em 3 cenários: sem API key, exceção do Gemini, resposta com menos de 3 linhas válidas — nunca propaga exceção nem retorna lista incompleta (NFR-3).'
+  maintainability:
+    status: PASS
+    notes: '_generate_segment_queries segue o mesmo padrão de parsing determinístico já usado em _extract_suggested_time (REUSE de estilo, não CREATE de novo padrão). Testes de _CONTENT_TYPE_QUERIES usam uma lista de termos banidos, protegendo contra regressão futura de viés de nicho.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Story 27.3 depende desta story: usa _generate_segment_queries, _summarize_snippets e _extract_suggested_time parametrizados para o fan-out real por segmento distinto ativo.'
+      refs: ['docs/stories/epic-27-intel-multinicho/27.3.story.md']
