@@ -1,0 +1,92 @@
+spec_id: epic-27-intel-multinicho
+phase: 6-plan
+author: "@architect (Aria)"
+date: "2026-07-26"
+traces_to: "spec.md (27.1/27.2/27.3) + critique.json (CRIT-1..4 incorporados)"
+verdict_upstream: "critique APPROVED (4.4)"
+
+principles:
+  - "Generalização, não reescrita: reaproveitar generate_weekly_intelligence, _save_weekly_context (upsert já existe), exa_search.search_exa_trends, _normalize."
+  - "Degradação graciosa preservada em todo ponto novo (Gemini/Exa falham → fallback, nunca quebra)."
+  - "EXA_PROVIDER=disabled continua default seguro."
+
+decisions_locked:
+  segment_storage:  # CRIT-1
+    store: "WeeklyContext.segment grava a forma BRUTA (para exibição no card)."
+    dedup_and_match: "Fan-out deduplica por _normalize(segment); consumidor /weekly casa por _normalize nos dois lados. Chave lógica de matching = normalizada; valor exibido = bruto."
+    upsert_note: "Ajustar o upsert de _save_weekly_context para deduplicar por (week_of, normalized_segment) evitando linhas duplicadas por variação de grafia."
+  cost_guardrail:  # CRIT-2
+    mechanism: "Env MAX_SEGMENTS_PER_RUN (default ex: 50). Dispatcher loga N de segmentos; se N > teto, loga WARNING e processa só os N primeiros (ordenados por nº de clientes ativos, desc)."
+  active_segment_def:  # CRIT-3
+    definition: "SELECT DISTINCT brand_profile->>'segment' FROM clients WHERE is_active = true AND COALESCE(brand_profile->>'segment','') <> ''."
+
+stories:
+  - id: "27.1"
+    title: "Fix do consumidor /weekly + normalização de segmento"
+    risk: low
+    depends_on: []
+    files:
+      - "backend/app/api/insights.py (get_weekly_insight ~L41-85)"
+    steps:
+      - "Trocar getattr(current_client,'business_segment',...) por leitura de brand_profile['segment']."
+      - "Aplicar _normalize no segmento do cliente e comparar com _normalize(WeeklyContext.segment). Como o filtro hoje é WHERE segment == X exato, migrar para matching normalizado (ex: comparar em Python sobre candidatos recentes OU coluna/func normalizada)."
+      - "Cliente sem segmento → 404 honesto (não fallback global que serve outro nicho)."
+    tests:
+      - "Cliente segmento 'Moda e vestuário' com WeeklyContext correspondente → recebe o dele."
+      - "Cliente sem segmento → 404 (não recebe construção civil)."
+      - "Regressão: cliente construção civil continua recebendo (NFR-4)."
+    ac_refinements_from_critique: []
+
+  - id: "27.2"
+    title: "Queries e prompts por segmento (produtor)"
+    risk: medium
+    depends_on: []
+    files:
+      - "backend/app/tasks/pipeline.py (_summarize_snippets ~L1016, prompt de horário ~L1085, + nova função de geração de queries)"
+      - "backend/app/tools/exa_search.py (_CONTENT_TYPE_QUERIES ~L37, montagem de query ~L207)"
+    steps:
+      - "Nova função async _generate_segment_queries(segment) -> list[str]: Gemini Flash gera 3 queries (arquétipos notícia/tendência/mercado, R-1); parsing determinístico (1 por linha); fallback [f'{segment} Brasil notícias semana', f'tendências {segment} Brasil 2026', f'mercado {segment} Brasil'] se Gemini falhar/vazio."
+      - "Parametrizar _summarize_snippets(snippets, segment): prompt referencia o segmento corrente, não 'construção civil e reforma'."
+      - "Parametrizar o prompt de extração de horário por segmento."
+      - "exa_search: _CONTENT_TYPE_QUERIES deixa de ser dict fixo de construção civil; a query passa a compor content_type + segment recebido (ex: base semântica por content_type + o segment)."
+    tests:
+      - "CRIT-4: query gerada para segmento X contém X (comparação normalizada) e NÃO contém termos fixos de construção civil ('acabamento','canteiro')."
+      - "Gemini indisponível → usa fallback template (assert)."
+      - "search_exa_trends(segment='Moda e vestuário', ...) não injeta termos de construção civil."
+      - "Validação manual/integração com ≥2 segmentos reais + construção civil (R-1)."
+    ac_refinements_from_critique: ["CRIT-4"]
+
+  - id: "27.3"
+    title: "Fan-out do weekly intelligence por segmento"
+    risk: medium
+    depends_on: ["27.2"]
+    files:
+      - "backend/app/tasks/pipeline.py (generate_weekly_intelligence ~L938 → dispatcher; nova subtarefa por segmento; _save_weekly_context ~L1109 upsert normalizado)"
+      - "backend/app/core/config ou env (MAX_SEGMENTS_PER_RUN)"
+      - "config de Celery Beat (se necessário — a schedule Monday 07:00 permanece)"
+    steps:
+      - "generate_weekly_intelligence vira DISPATCHER: consulta segmentos distintos ativos (active_segment_def), deduplica por _normalize, aplica guardrail MAX_SEGMENTS_PER_RUN (CRIT-2, loga N)."
+      - "Para cada segmento: despacha subtarefa (Celery group/chord ou loop com try/except isolado) que usa _generate_segment_queries (27.2), busca Exa, resume, extrai horário, e chama _save_weekly_context(segment=bruto)."
+      - "_save_weekly_context: upsert deduplicando por (week_of, _normalize(segment)) — CRIT-1."
+      - "suggested_time gravado por segmento (FR-6), mantendo 'sem_dados' honesto quando sinal fraco (R-3)."
+    tests:
+      - "2 segmentos ativos distintos → 2 WeeklyContext (não 1 global)."
+      - "Falha Exa no segmento A não impede persistência do segmento B (NFR-2)."
+      - "N > MAX_SEGMENTS_PER_RUN → WARNING + processa só o teto (CRIT-2)."
+      - "Variação de grafia do mesmo segmento não cria 2 linhas (CRIT-1)."
+      - "EXA_PROVIDER=disabled → nenhuma chamada (NFR-6). Regressão construção civil (NFR-4)."
+    ac_refinements_from_critique: ["CRIT-1", "CRIT-2", "CRIT-3"]
+
+sequencing: "27.1 (independente, fix imediato) → 27.2 (building block) → 27.3 (fan-out)."
+
+pre_production_gate:
+  - "CON-3: confirmar N real de segmentos ativos (Supabase) antes de habilitar EXA_PROVIDER=exa com fan-out."
+  - "Confirmar plano Exa (free ~10 segmentos; Starter se N>=20)."
+  - "@devops: garantir MAX_SEGMENTS_PER_RUN setado no Railway antes do primeiro run em prod."
+
+handoff_to:
+  next: "@sm *draft — rascunhar Story 27.1 primeiro (menor risco, fix imediato), seguindo o fluxo SDC normal (@sm → @po → @dev → @qa → @devops)."
+  model_note: "A partir do *draft das stories seguimos em planejamento (Opus) para @sm/@po; troca para Sonnet só na implementação @dev."
+  epic_28_pending: "FR-7 (concorrentes) + FR-8 (re-análise Scout) — spec pipeline próprio, com Research dedicada ao sinal de concorrentes via Exa."
+
+status: COMPLETE

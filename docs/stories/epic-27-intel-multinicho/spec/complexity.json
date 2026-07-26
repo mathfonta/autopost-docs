@@ -1,0 +1,84 @@
+{
+  "spec_id": "epic-27-intel-multinicho",
+  "phase": "2-assess",
+  "author": "@architect (Aria)",
+  "date": "2026-07-26",
+  "traces_to": "requirements.json (FR-1..8, NFR-1..6, CON-1..4)",
+
+  "complexity_dimensions": {
+    "scope": {
+      "score": 4,
+      "rationale": "Toca pipeline.py (generate_weekly_intelligence, _summarize_snippets, prompt de horário, _save_weekly_context), exa_search.py (_CONTENT_TYPE_QUERIES + montagem de query), insights.py (fix /weekly), config de Celery Beat, + capacidades novas (concorrentes FR-7, re-análise Scout FR-8) que provavelmente exigem nova coluna/entidade e nova tarefa Beat. ~6-8 pontos de código + testes."
+    },
+    "integration": {
+      "score": 4,
+      "rationale": "Exa (uso expandido: por segmento + concorrentes), Gemini Flash (geração de query e resumo por segmento), Scout (re-execução). Múltiplas integrações externas, uso ampliado das existentes."
+    },
+    "infrastructure": {
+      "score": 3,
+      "rationale": "Fan-out de Celery Beat (group/chord por segmento), possível nova tabela/coluna (competitor_signals), cache Redis por segmento, provável gatilho de upgrade do plano Exa. Mudança de infra moderada, sem novo serviço."
+    },
+    "knowledge": {
+      "score": 2,
+      "rationale": "Time construiu o Epic 13 e conhece bem Exa/Celery/pipeline. Território novo é só a análise de concorrentes (como obter sinal confiável sem Meta API) — daí precisar da Fase 3 Research."
+    },
+    "risk": {
+      "score": 3,
+      "rationale": "Roda em background (Beat), fallback gracioso, EXA_PROVIDER=disabled default, requisito de zero regressão. Não está no caminho crítico do usuário (card degrada bem). Riscos reais: custo Exa no fan-out e QUALIDADE da análise de concorrentes (risco de sinal ruim/inventado)."
+    }
+  },
+  "total_score": 16,
+  "complexity_class": "COMPLEX",
+  "phases_required": "6 fases + ciclo de revisão (classe COMPLEX)",
+
+  "exa_viability_verdict": {
+    "verdict": "VIÁVEL",
+    "key_insight": "O fan-out é por SEGMENTO DISTINTO, não por cliente. 10 clientes de construção civil = 1 segmento = 1 coleta. Isso mantém N pequeno e o custo sob controle.",
+    "cost_model_estimate": {
+      "assumptions": "N = número de segmentos distintos ativos. ~4 chamadas Exa/segmento/semana (3 tendência + 1 horário) para o núcleo; +2-3/segmento/semana para concorrentes (FR-7). 4.3 semanas/mês.",
+      "n_10_segments": "núcleo ~172 req/mês + concorrentes ~130 = ~300 req/mês (weekly-side) — dentro do FREE tier (1000/mês)",
+      "n_20_segments": "~600 req/mês weekly-side + carga per-post do Epic 13 → aproximando do teto free; recomendar STARTER ($25/mês, 5000 req)",
+      "note": "Some-se a carga per-post de search_exa_trends (estimada no Epic 13). Ainda assim, com receita-alvo de R$67/cliente, custo Exa fica <3% mesmo no Starter."
+    },
+    "validation_pending": "CON-3: N real de segmentos ativos em produção (Supabase indisponível nesta sessão). Confirmar antes de habilitar EXA_PROVIDER=exa em produção com fan-out."
+  },
+
+  "architectural_recommendations": {
+    "Q1_query_generation": {
+      "decision": "LLM gera queries por segmento (Gemini Flash), com fallback para template",
+      "rationale": "O fan-out é semanal (não por-post), então +1 chamada Gemini Flash por segmento/semana é custo desprezível e roteia pelo provider correto (ADR de modelos, CON-4). Robustez muito maior a segmentos free-text mal escritos. Se Gemini falhar, cai para template f-string — degradação graciosa (NFR-3).",
+      "resolves": "open_question Q1 + FR-2"
+    },
+    "Q2_segment_taxonomy": {
+      "decision": "v1 mantém free-text + camada de normalização canônica (reusar _normalize: lowercase/sem acento/trim) para dedup e matching. NÃO impor taxonomia fechada agora.",
+      "rationale": "Taxonomia fechada exige UI de seleção + migração de dados existentes + decisão de UX — fora do escopo de valor imediato. Normalização já resolve o essencial (dedup do fan-out e matching produtor↔consumidor). Mapeamento canônico leve de variantes comuns pode entrar como refinamento.",
+      "resolves": "open_question Q2 + CON-1"
+    },
+    "Q3_fanout_design": {
+      "decision": "Tarefa dispatcher + subtarefa por segmento (Celery group/chord)",
+      "rationale": "Isola falha por segmento (NFR-2): a coleta de 'Moda' falhar não pode derrubar 'Construção civil'. Dispatcher consulta segmentos distintos ativos e despacha N subtarefas; callback agrega log. Alternativa (loop com try/except) é aceitável mas menos observável.",
+      "resolves": "open_question Q3 + NFR-2"
+    },
+    "Q4_competitor_delivery": {
+      "decision": "PRELIMINAR — coluna JSONB nullable competitor_signals em WeeklyContext (co-localizada com a inteligência semanal do segmento), consumida por card estendido no dashboard. CONFIRMAR na Fase 4 após a Fase 3 Research.",
+      "rationale": "Evita nova entidade/tabela e mantém a inteligência do segmento junta. MAS depende de a Fase 3 Research provar que dá para extrair sinal de concorrente confiável via Exa (web) sem Meta API. É o maior desconhecido do epic.",
+      "resolves": "parcial — open_question Q4"
+    },
+    "Q5_scout_reanalysis": {
+      "decision": "Re-análise mensal via Celery Beat (alinhado à cadência mensal já existente do promoter), só para clientes ativos com Instagram conectado. Baixa prioridade dentro do epic.",
+      "rationale": "Barato, aproveita cadência de infra existente. É a peça mais separável do epic — candidata a última story ou a diferir.",
+      "resolves": "open_question Q5 + FR-8"
+    }
+  },
+
+  "SPLIT_RECOMMENDATION": {
+    "recommendation": "Dividir em DOIS epics",
+    "epic_27_core": "FR-1 a FR-6 — generalização multi-nicho do que já existe (fan-out, queries/prompts por segmento, fix do bug /weekly, horário por segmento). Risco BAIXO-MÉDIO, valor central, sem território novo. Entregável rápido.",
+    "epic_28_new_capabilities": "FR-7 (análise de concorrentes) + FR-8 (re-análise Scout) — capacidades NOVAS que exigem Research (Fase 3) própria e têm risco de qualidade. Depende do Epic 27 pronto.",
+    "rationale": "Alinha com a nota do próprio usuário ('provavelmente vira 2 epics'). Entrega o valor central (todo nicho recebe inteligência) sem esperar a parte de maior risco (concorrentes). Reduz o blast radius de cada release. O usuário escolheu escopo 'Completo' — a divisão NÃO tira nada do escopo, só sequencia a entrega.",
+    "requires_user_decision": true
+  },
+
+  "verdict": "PROCEED_TO_RESEARCH",
+  "next_phase": "3-research (@analyst) — foco: viabilidade e método de extração de sinal de concorrentes via Exa (o maior desconhecido); benchmark de como concorrentes de mercado (ex: FeedHive) entregam inteligência de nicho."
+}

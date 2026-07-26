@@ -1,0 +1,59 @@
+{
+  "spec_id": "epic-27-intel-multinicho",
+  "phase": "5-critique",
+  "author": "@qa (Quinn)",
+  "date": "2026-07-26",
+  "reviews": "spec.md",
+
+  "dimension_scores": {
+    "completeness": {"score": 4, "note": "Cobre bem os 3 pontos de falha + FR-1..6. Gaps: (a) não define exatamente o que é 'segmento ativo' na query do dispatcher; (b) NFR-1 diz custo controlado mas o spec não dá mecanismo concreto de guardrail."},
+    "clarity": {"score": 4, "note": "Escopo IN/OUT e decisões claros. Sequenciamento explícito."},
+    "feasibility": {"score": 5, "note": "Generalização de código já em produção (Epic 13). Sem território novo (concorrentes foi ao Epic 28). Baixa incerteza técnica."},
+    "traceability": {"score": 5, "note": "Matriz FR→story completa, sem FR órfão nem story sem FR. Gate Artigo IV (No Invention) satisfeito."},
+    "testability": {"score": 4, "note": "ACs majoritariamente testáveis com mock de Exa/Gemini. Duas ACs 'soft' a apertar (ver issues)."}
+  },
+  "average_score": 4.4,
+  "verdict": "APPROVED",
+
+  "issues": [
+    {
+      "id": "CRIT-1",
+      "severity": "medium",
+      "target": "Story 27.3",
+      "finding": "Consistência de gravação do segmento em WeeklyContext. O upsert dedup existente é por (week_of, segment) EXATO. Se o produtor gravar o segmento em forma bruta ('Construção civil') e o consumidor casar via _normalize, duas variantes de grafia gerariam 2 linhas e matching frágil.",
+      "recommendation": "Definir na Story 27.3 uma forma canônica única para gravar WeeklyContext.segment (ex: gravar bruto para exibição MAS deduplicar o fan-out e casar por _normalize consistente nos dois lados). Explicitar no AC."
+    },
+    {
+      "id": "CRIT-2",
+      "severity": "medium",
+      "target": "Story 27.3 / NFR-1",
+      "finding": "Sem guardrail concreto de custo. Se um bug ou dado sujo inflar o número de segmentos distintos, o fan-out dispara N chamadas Exa sem teto.",
+      "recommendation": "Adicionar AC: logar N de segmentos antes de despachar; opcionalmente um teto configurável (ex: MAX_SEGMENTS_PER_RUN) que loga WARNING e não excede. Barato e protege o orçamento (NFR-1)."
+    },
+    {
+      "id": "CRIT-3",
+      "severity": "low",
+      "target": "Story 27.3",
+      "finding": "'Segmento ativo' não está definido operacionalmente.",
+      "recommendation": "Definir: segmentos distintos de clientes com is_active=true e brand_profile['segment'] não-vazio. Deixar explícito no AC/Dev Notes."
+    },
+    {
+      "id": "CRIT-4",
+      "severity": "low",
+      "target": "Story 27.2 AC1",
+      "finding": "'as queries mencionam X' é assertível de forma frouxa.",
+      "recommendation": "Apertar para: 'a query gerada contém o segmento (comparação normalizada) e NÃO contém termos fixos de construção civil'. Torna o teste determinístico."
+    },
+    {
+      "id": "CRIT-5",
+      "severity": "low",
+      "target": "Story 27.2",
+      "finding": "Não menciona cache das queries geradas por Gemini.",
+      "recommendation": "Opcional: como o fan-out é semanal, regenerar a cada run é aceitável. Registrar como decisão consciente, não gap. Sem ação obrigatória."
+    }
+  ],
+
+  "blocking_issues": [],
+  "verdict_rationale": "Nenhum issue é bloqueante. CRIT-1 e CRIT-2 são refinamentos importantes que devem ser incorporados quando @sm rascunhar a Story 27.3 (não exigem revisão do spec). Média 4.4 ≥ 4.0 → APPROVED.",
+  "next_phase": "6-plan (@architect) — implementation.yaml com sequência técnica, incorporando CRIT-1..4 como requisitos das stories."
+}

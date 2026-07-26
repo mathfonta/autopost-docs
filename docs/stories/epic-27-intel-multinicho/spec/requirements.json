@@ -1,0 +1,96 @@
+{
+  "spec_id": "epic-27-intel-multinicho",
+  "title": "Inteligência de Mercado Multi-Nicho (generalização do Epic 13)",
+  "phase": "1-gather",
+  "author": "@pm (Morgan)",
+  "date": "2026-07-26",
+  "status": "awaiting-user-approval",
+  "origin": "Backlog de valor (item 5 / SESSAO-HANDOFF). Generalização do Epic 13 (Exa Intelligence), cuja Story 13.4 (generate_weekly_intelligence) foi construída hardcoded para 'Construção civil'.",
+
+  "problem_statement": "A inteligência de mercado semanal (Exa) só existe para o segmento 'Construção civil'. Clientes de qualquer outro segmento não recebem tendências, hashtags em alta, nem horário sugerido baseados no próprio nicho. Confirmado em produção: cliente de teste com segmento 'Moda e vestuário' recebe zero dados. Há três pontos de falha no código, não um só.",
+
+  "confirmed_code_findings": [
+    {
+      "id": "FIND-1",
+      "location": "backend/app/tasks/pipeline.py:938-1013 (generate_weekly_intelligence)",
+      "finding": "Tarefa Celery Beat única e global. 3 queries de tendência + 1 de horário TODAS hardcoded para construção civil. Salva UMA linha em weekly_context com segment='Construção civil' literal. Não itera por segmento.",
+      "severity": "core"
+    },
+    {
+      "id": "FIND-2",
+      "location": "backend/app/tools/exa_search.py:37-46 (_CONTENT_TYPE_QUERIES)",
+      "finding": "search_exa_trends() já aceita segment como parâmetro (usado na geração de cada post), mas os templates de query internos por content_type são todos de construção civil ('acabamento', 'canteiro obra', 'reforma residencial'). Viés de nicho embutido mesmo no caminho multi-tenant.",
+      "severity": "core"
+    },
+    {
+      "id": "FIND-3",
+      "location": "backend/app/api/insights.py:51 (get_weekly_insight)",
+      "finding": "BUG: lê getattr(current_client, 'business_segment', None) — coluna inexistente no modelo Client. O segmento real vive em brand_profile['segment'] (JSONB), como /best-posting-time já faz corretamente (insights.py:330). Resultado: /weekly sempre cai no fallback 'qualquer segmento' e serve dado de construção civil a todos.",
+      "severity": "bug"
+    },
+    {
+      "id": "FIND-4",
+      "location": "backend/app/tasks/pipeline.py:1016-1042 (_summarize_snippets) e 1085+ (extract time prompt)",
+      "finding": "Prompts de resumo e de extração de horário hardcoded para 'construção civil e reforma'. Precisam ser parametrizados por segmento.",
+      "severity": "core"
+    },
+    {
+      "id": "FIND-5",
+      "location": "N/A — capacidade inexistente",
+      "finding": "Não há nenhuma análise de concorrentes por segmento hoje. Escopo v1 do usuário pede adicioná-la (capacidade nova).",
+      "severity": "new-capability"
+    }
+  ],
+
+  "existing_foundation_reuse": [
+    "brand_profile['segment'] (JSONB em Client) já é o campo canônico de segmento, preenchido no onboarding e refinável pela sugestão do Scout (/onboarding/scout/accept grava suggested_segment).",
+    "_normalize() em insights.py (lowercase + remove acento) já resolve matching case/acento-insensível.",
+    "WeeklyContext já tem coluna segment (String 100, indexed) e upsert por (week_of, segment) em _save_weekly_context — a tabela suporta multi-segmento sem mudança de schema.",
+    "exa_search.py já tem cache Redis 24h por chave e fallback gracioso (retorna None, nunca bloqueia pipeline).",
+    "Epic 13 epic.md já traz análise de custo Exa (free 1000 req/mês ~28 clientes; Starter $25 ~140 clientes)."
+  ],
+
+  "functional_requirements": [
+    {"id": "FR-1", "text": "generate_weekly_intelligence deve iterar sobre os segmentos DISTINTOS de clientes ativos (dedup por segmento normalizado), gerando um WeeklyContext por segmento — não um global.", "traces_to": "FIND-1"},
+    {"id": "FR-2", "text": "As queries de tendência e o posting_time_query devem ser derivados do segmento corrente, não fixos. (Método de derivação — template vs LLM — é decisão do @architect, Fase 2.)", "traces_to": "FIND-1, FIND-4"},
+    {"id": "FR-3", "text": "Os prompts de _summarize_snippets e de extração de horário devem ser parametrizados pelo segmento corrente.", "traces_to": "FIND-4"},
+    {"id": "FR-4", "text": "_CONTENT_TYPE_QUERIES em exa_search.py deve deixar de ser fixo de construção civil e passar a compor a query a partir do segment recebido.", "traces_to": "FIND-2"},
+    {"id": "FR-5", "text": "GET /insights/weekly deve ler o segmento de brand_profile['segment'] (via _normalize), não do atributo inexistente business_segment; e casar com WeeklyContext.segment normalizado.", "traces_to": "FIND-3"},
+    {"id": "FR-6", "text": "suggested_time (horário de postagem) deve ser calculado por segmento, de modo que a Story 19.3 (sugestão de horário) tenha dado real para qualquer nicho, não só construção civil.", "traces_to": "escopo 'Enxuto + horário'"},
+    {"id": "FR-7", "text": "Adicionar análise de concorrentes por segmento: identificar/observar perfis ou tendências de concorrentes do nicho via Exa e sintetizar sinais úteis. (Forma de entrega e ponto de consumo a definir na Fase 4 Spec — provável: campo novo no WeeklyContext ou entidade nova.)", "traces_to": "FIND-5, escopo Completo"},
+    {"id": "FR-8", "text": "Re-análise periódica do Scout por segmento: reavaliar perfis de clientes periodicamente para manter refined_niche/segment atualizados (hoje o Scout roda só no onboarding).", "traces_to": "escopo Completo"}
+  ],
+
+  "non_functional_requirements": [
+    {"id": "NFR-1", "text": "Custo Exa controlado: o fan-out multiplica chamadas por N segmentos distintos (~4 chamadas/segmento/semana para tendência+horário, + chamadas de concorrentes). @architect valida contra o plano Exa e o N real de segmentos em produção.", "category": "cost"},
+    {"id": "NFR-2", "text": "Reliability: falha na coleta de um segmento não pode bloquear os demais (isolar por segmento — ex: Celery group/subtarefas ou try/except por segmento).", "category": "reliability"},
+    {"id": "NFR-3", "text": "Fallback gracioso preservado: qualquer falha Exa/LLM loga WARNING e o sistema segue sem dado, nunca quebra o pipeline nem o dashboard (padrão já vigente).", "category": "reliability"},
+    {"id": "NFR-4", "text": "Zero regressão para o segmento construção civil, que já funciona em produção hoje.", "category": "compatibility"},
+    {"id": "NFR-5", "text": "Multi-tenant: nenhum dado de segmento de um cliente pode vazar para outro; matching de segmento é o limite de isolamento.", "category": "security"},
+    {"id": "NFR-6", "text": "EXA_PROVIDER=disabled continua sendo o default seguro (zero chamadas externas até habilitar).", "category": "config"}
+  ],
+
+  "constraints": [
+    {"id": "CON-1", "text": "Segmento é free-text em brand_profile['segment'] (Scout sugere, usuário pode aceitar). Não há taxonomia fechada hoje. A qualidade da busca por segmento depende da grafia — o @architect deve decidir se normaliza/mapeia para taxonomia ou aceita free-text."},
+    {"id": "CON-2", "text": "Exa via httpx direto no worker Celery (não MCP) — decisão arquitetural do Epic 13 mantida."},
+    {"id": "CON-3", "text": "Supabase free auto-pausa; não consegui puxar o N de segmentos ativos nesta sessão (MCP sem token). @architect precisa desse número real antes de fechar o dimensionamento de custo."},
+    {"id": "CON-4", "text": "Gemini Flash é o provider de síntese em volume (ADR de roteamento de modelos); qualquer geração de query ou resumo por segmento deve seguir esse roteamento, não Claude."}
+  ],
+
+  "out_of_scope_v1": [
+    "Taxonomia de segmentos com UI de seleção fechada (se @architect recomendar, vira story separada).",
+    "Métricas Meta pós-aprovação como fonte de sinal (depende do Meta App Review — fica para quando a permissão de insights existir).",
+    "Boost pago / Meta Ads (Epic 26, separado)."
+  ],
+
+  "open_questions_for_later_phases": [
+    {"q": "Template de query vs LLM gera queries por segmento?", "owner": "@architect (Fase 2)"},
+    {"q": "Free-text de segmento vs normalização/taxonomia para dedup e matching?", "owner": "@architect (Fase 2)"},
+    {"q": "Fan-out: uma tarefa que itera vs Celery group com subtarefa por segmento?", "owner": "@architect (Fase 2/6)"},
+    {"q": "Análise de concorrentes: como entregar (campo no WeeklyContext, entidade nova, onde consumir no dashboard)?", "owner": "@pm/@architect (Fase 4)"},
+    {"q": "Cadência da re-análise do Scout e gatilho (tempo fixo? mudança detectada?)", "owner": "@architect (Fase 2/4)"},
+    {"q": "N real de segmentos ativos em produção para dimensionar custo Exa.", "owner": "@architect (Fase 2) — requer acesso à prod"}
+  ],
+
+  "business_value": "Diferencial competitivo (resposta ao FeedHive citada no plano mestre): cada cliente recebe copy, hashtags e horário contextualizados ao PRÓPRIO nicho + sinais de concorrentes. Hoje o produto entrega isso só para construção civil, limitando a base de clientes atendível. É pré-requisito de qualidade para escalar para clientes de segmentos variados."
+}

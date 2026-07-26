@@ -1,0 +1,58 @@
+{
+  "spec_id": "epic-27-intel-multinicho",
+  "phase": "3-research",
+  "author": "@analyst (Alex)",
+  "date": "2026-07-26",
+  "scope_note": "Research enxuta — Epic 27 é generalização de código já validado (Epic 13). O desconhecido de maior risco (extração de sinal de concorrentes) foi movido para o Epic 28 e terá research própria. Aqui cobrimos só o que é incerto no núcleo.",
+  "traces_to": "complexity.json (Q1, Q2) + requirements.json (FR-2, FR-4, FR-6, CON-1)",
+
+  "research_items": [
+    {
+      "id": "R-1",
+      "question": "Como prompt Gemini Flash para gerar boas queries de busca Exa a partir de um nome de segmento? (valida a decisão Q1 do @architect)",
+      "findings": [
+        "As queries hardcoded que funcionam hoje seguem 3 arquétipos: (a) notícia da semana ('{X} Brasil notícias semana'), (b) tendência de produto/técnica ('tendências acabamento revestimento 2025'), (c) contexto regional/mercado ('mercado imobiliário Florianópolis SC'). O arquétipo (c) é o mais específico de construção civil e o mais difícil de generalizar.",
+        "Gemini Flash gera facilmente 3 queries por segmento seguindo esses arquétipos. Custo desprezível: 1 chamada/segmento/semana. Roteia pelo provider correto (ADR de modelos, CON-4).",
+        "Recomendação de prompt: instruir Gemini a produzir EXATAMENTE 3 queries em PT-BR, uma por arquétipo (notícia semanal / tendência técnica-de-produto / mercado-consumo), retornando só as queries (uma por linha), sem texto extra — mesmo padrão de parsing determinístico já usado em _extract_suggested_time."
+      ],
+      "recommendation": "LLM-gerado com os 3 arquétipos como guia no prompt; fallback template f'{segment} Brasil notícias semana' se Gemini falhar. Validar com 2-3 segmentos reais ('Moda e vestuário', 'Odontologia', 'Construção civil') na implementação (a Story de fan-out inclui esse teste).",
+      "resolves": "FR-2, FR-4, Q1"
+    },
+    {
+      "id": "R-2",
+      "question": "Como são, na realidade, os valores de brand_profile['segment']? Free-text + normalização é suficiente para dedup e matching? (valida Q2/CON-1)",
+      "findings": [
+        "Segmentos são frases nominais em PT-BR geradas/sugeridas pelo Scout no onboarding (ex: 'Construção civil', 'Moda e vestuário') e podem ser aceitos/ajustados pelo usuário. Tendem a ser limpos, mas sem taxonomia fechada.",
+        "_normalize() (lowercase + remove acento, já em insights.py) resolve variação de grafia/caixa para dedup do fan-out e matching produtor↔consumidor.",
+        "Risco residual: variantes semânticas não-idênticas ('Moda' vs 'Moda e vestuário') NÃO deduplicam por normalização e gerariam 2 coletas Exa distintas. Aceitável na v1 (só infla levemente o N); taxonomia canônica resolveria, mas é over-engineering agora."
+      ],
+      "recommendation": "v1: free-text + _normalize para chave de dedup/matching. Não impor taxonomia. Registrar o risco de variantes semânticas como débito conhecido para reavaliar quando N de segmentos crescer.",
+      "resolves": "FR-1, FR-5, Q2, CON-1"
+    },
+    {
+      "id": "R-3",
+      "question": "Há sinal web suficiente para horário de postagem específico por nicho? (valida FR-6)",
+      "findings": [
+        "A query genérica 'melhor horário postar Instagram {segment} Brasil' tende a retornar conselho GENÉRICO de Instagram para muitos nichos (poucos nichos têm estudo dedicado de horário).",
+        "O sistema JÁ trata ausência de sinal de forma honesta: correção desta sessão fez /best-posting-time e a sugestão de horário retornarem 'sem_dados' com mensagem honesta quando não há histórico real nem Exa (ver SESSAO-HANDOFF, feedback_manual_test).",
+        "Portanto FR-6 não precisa garantir horário por nicho — precisa garantir que a BUSCA seja por segmento e que a ausência de sinal continue tratada honestamente (sem inventar)."
+      ],
+      "recommendation": "FR-6 = parametrizar a posting_time_query por segmento e persistir suggested_time por segmento; manter o comportamento honesto de 'sem dados' quando o sinal não for claro. Não prometer precisão de horário por nicho.",
+      "resolves": "FR-6"
+    },
+    {
+      "id": "R-4",
+      "question": "Benchmark competitivo — como concorrentes entregam inteligência de nicho? (contexto de posicionamento)",
+      "findings": [
+        "O plano-mestre-2026-07 já posiciona esta linha como resposta ao FeedHive (Epic 23 Score cita o mesmo concorrente).",
+        "Benchmark aprofundado de concorrentes (FeedHive e similares) é insumo do Epic 28 (análise de concorrentes), não do núcleo do Epic 27. Fica registrado como dependência de research do Epic 28."
+      ],
+      "recommendation": "Não aprofundar no Epic 27. Mover benchmark competitivo detalhado para a Fase 3 Research do Epic 28.",
+      "resolves": "defer-to-epic-28"
+    }
+  ],
+
+  "verdict": "PROCEED_TO_SPEC",
+  "no_new_unknowns_blocking": true,
+  "next_phase": "4-write-spec (@pm) — spec.md escopado ao Epic 27 (FR-1..6), com stories propostas rastreando cada FR/NFR."
+}

@@ -1,0 +1,44 @@
+schema: 1
+story: '27.1'
+story_title: 'Fix do consumidor /weekly + matching de segmento normalizado'
+gate: PASS
+status_reason: 'Bug real corrigido: get_weekly_insight lia atributo inexistente business_segment (sempre "geral") e caía em fallback global, servindo WeeklyContext de "Construção civil" a clientes de qualquer segmento. Fix reusa o padrão já correto de get_best_posting_time (mesmo arquivo): lê brand_profile[segment], casa por _normalize_segment, remove o fallback global. 5 testes novos cobrem match, 404 sem contexto do segmento, 404 sem segmento, regressão construção civil e matching por grafia normalizada. Suíte completa: 400 passed, 0 failed.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-26T00:00:00-03:00'
+
+top_issues: []
+
+waiver: { active: false }
+
+quality_score: 100
+expires: '2026-08-09T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 400
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'NFR-5 (isolamento multi-tenant): confirmado por teste — cliente de um segmento nunca recebe WeeklyContext de outro. Fallback global (a fonte do vazamento) foi removido.'
+  performance:
+    status: PASS
+    notes: 'Query com limit(20) + matching em Python, mesmo padrão já em produção em get_best_posting_time. Sem impacto de performance perceptível.'
+  reliability:
+    status: PASS
+    notes: 'pytest completo: 400 passed, 0 failed. Zero regressão confirmada para o segmento construção civil (NFR-4), que já funcionava em produção.'
+  maintainability:
+    status: PASS
+    notes: 'Reusa _normalize_segment já existente (REUSE, não CREATE). Remove código morto (_current_monday) que ficaria órfão após a correção. Docstring da função explica o porquê da mudança, não só o o quê.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'CRIT-1 do critique.json do Epic 27 (consistência de gravação do segmento) permanece pendente para a Story 27.3 — o produtor ainda grava só "Construção civil" bruto. Story 27.1 resolve o lado consumidor; o lado produtor é escopo de 27.2/27.3.'
+      refs: ['docs/stories/epic-27-intel-multinicho/spec/critique.json']
+
+achado_da_validacao_po:
+  descricao: 'Durante a validação @po, confirmado que WeeklyInsightCard.tsx (frontend) já trata qualquer erro/404 do endpoint de forma silenciosa (card simplesmente não renderiza) — eliminando o único risco de compatibilidade que a story listava. Nenhuma mudança de frontend foi necessária nesta story.'
