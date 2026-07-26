@@ -1,0 +1,54 @@
+schema: 1
+story: '19.1'
+story_title: 'Modelo de agendamento — scheduled_for, status scheduled e endpoint de agendar'
+gate: PASS
+status_reason: 'Todos os 7 ACs confirmados por leitura direta do código (não só o relato do @dev). Migração segue exatamente o padrão já validado no projeto (e2f3a4b5c6d7) para ALTER TYPE ADD VALUE isolado de outros usos do valor na mesma transação — sem risco de erro em Postgres 12+. Endpoint replica fielmente o padrão de auth/ownership/status do /approve, que foi confirmado intocado (9/9 testes originais passando sem modificação). Suíte completa 368/368. Único achado é um LOW não-bloqueante para a Story 19.5 (ver FUTURE-001).'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-25T00:00:00-03:00'
+
+top_issues:
+  - id: 'FUTURE-001'
+    severity: low
+    finding: '`scheduled_for` não está exposto em `ContentRequestDetailResponse` (nem, por consequência, em `ContentRequestListResponse`, que reusa o mesmo schema). Não é uma falha da Story 19.1 — nenhum AC pede isso — mas a Story 19.5 (tela "Posts agendados") vai precisar listar os posts agendados com seu horário, e hoje o GET /content-requests não devolve esse campo. A Story 19.4 não é afetada, porque a resposta do próprio POST /schedule já inclui scheduled_for.'
+    suggested_action: 'Ao chegar na Story 19.5 (ou antes, na 19.2), adicionar `scheduled_for: datetime | None = None` em `ContentRequestDetailResponse` (app/schemas/content.py:25-49). Mudança de 1 linha, baixo risco.'
+    suggested_owner: dev
+
+  - id: 'INFO-001'
+    severity: low
+    finding: 'O endpoint normaliza `scheduled_for` sem timezone assumindo UTC (`if scheduled_for.tzinfo is None: scheduled_for = scheduled_for.replace(tzinfo=timezone.utc)`). Isso é um fallback defensivo — o AC4 espera que o body já venha com timezone (frontend da 19.4 deve sempre enviar ISO8601 com timezone) — mas não há teste cobrindo especificamente o caso de datetime naive.'
+    suggested_action: 'Não bloqueante. Se quiser fechar 100%, adicionar 1 teste com datetime naive no body. Baixo valor dado que o comportamento correto (assumir UTC) já está implementado.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 96
+expires: '2026-08-08T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 16
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Ownership (403), existência (404) e transição de status (409) replicam exatamente o padrão já auditado do /approve. Nenhuma superfície nova de risco — sem SQL cru (ORM), sem dados sensíveis expostos na resposta.'
+  performance:
+    status: PASS
+    notes: 'Índice composto (status, scheduled_for) criado na própria migração, antecipando a necessidade do Beat de 1 min da Story 19.2 — boa prática, evita retrabalho.'
+  reliability:
+    status: PASS
+    notes: 'Migração segue padrão já validado no projeto para enum ADD VALUE. Migração NÃO foi aplicada em produção nesta sessão (decisão correta do @dev — efeito em produção requer aprovação explícita fora do escopo de implementação); aplicar no momento do deploy.'
+  maintainability:
+    status: PASS
+    notes: 'Endpoint colocado logo após /approve, mesmo estilo de código, comentário explica a decisão de arquitetura (endpoint separado) e aponta onde cancelar/reagendar serão implementados (19.2) — boa rastreabilidade para quem ler depois.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Expor scheduled_for em ContentRequestDetailResponse antes/durante a Story 19.5 (FUTURE-001)'
+      refs: ['backend/app/schemas/content.py']
+    - action: 'Aplicar a migração a1b2c3d4e5f6 no ambiente real no momento do deploy (não aplicada nesta sessão)'
+      refs: ['backend/migrations/versions/a1b2c3d4e5f6_add_scheduling_to_content_requests.py']

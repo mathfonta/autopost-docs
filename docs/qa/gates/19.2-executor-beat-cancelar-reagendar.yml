@@ -1,0 +1,46 @@
+schema: 1
+story: '19.2'
+story_title: 'Executor de publicação agendada (Celery Beat) + cancelar/reagendar'
+gate: PASS
+status_reason: 'Todos os 7 ACs confirmados por leitura direta do código. O claim atômico (UPDATE...RETURNING) implementa exatamente a decisão do Architecture Review — verificado que usa uma única query condicional, sem select-depois-update em dois passos. Endpoints de cancelar/reagendar replicam o padrão de auth/ownership/status já auditado na 19.1, com validação de janela temporal compartilhada via _validate_scheduled_for (boa decisão de reuso, evita duplicação). 20/20 testes próprios rodados por mim, suíte completa 391/391.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-25T00:00:00-03:00'
+
+top_issues:
+  - id: 'INFO-001'
+    severity: low
+    finding: 'A prova de idempotência sob concorrência real (dois ticks do Beat simultâneos nunca publicarem o mesmo post duas vezes) depende de uma garantia do Postgres (row-level locking em UPDATE) que não é possível provar com mocks — só com teste de integração contra um banco real. Os testes unitários cobrem o comportamento observável (claim vazio → nenhum publish_post disparado) e a forma da query (filtra status+scheduled_for, usa UPDATE...RETURNING), que é o que dá para verificar nesta camada.'
+    suggested_action: 'Não bloqueante — comportamento correto por design e already confirmado no Architecture Review. Se quiser certeza absoluta, um teste de integração contra Postgres real (fora do escopo de testes unitários) seria o próximo passo, não urgente.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 95
+expires: '2026-08-08T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 20
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Cancelar e reagendar replicam ownership (403) e status guard (409) já auditados. Nenhuma superfície nova.'
+  performance:
+    status: PASS
+    notes: 'Índice (status, scheduled_for) criado na 19.1 cobre exatamente a query do claim — Beat de 1 min não faz full scan.'
+  reliability:
+    status: PASS
+    notes: 'Claim atômico é a mitigação correta para o risco de duplicação identificado no Architecture Review. Cancelar preserva o conteúdo aprovado (volta a awaiting_approval, não descarta) — decisão de produto corretamente implementada.'
+  maintainability:
+    status: PASS
+    notes: '_validate_scheduled_for extraída como função compartilhada entre agendar e reagendar — boa prática, evita duplicação de lógica de validação.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Considerar um teste de integração contra Postgres real para provar a idempotência sob concorrência de fato (INFO-001), quando houver infraestrutura de teste de integração no projeto'
+      refs: ['backend/app/tasks/pipeline.py']
