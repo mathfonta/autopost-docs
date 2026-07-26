@@ -36,7 +36,7 @@ Ainda precisa gravar os vídeos de demonstração exigidos pelo App Review. Não
 
 ### 5. Backlog de valor (não priorizado)
 - Analytics PostHog incompleto (faltam `post_approved`, `upgrade_clicked`, `churn`)
-- Epic 25 — atualizar modelos LLM (`claude-sonnet-4-6`/`haiku-4-5` → Sonnet 5/Opus 4.8)
+- ~~Epic 25 — atualizar modelos LLM~~ → **Done** (2026-07-26, story 25.1, gate PASS 100 — ver `docs/stories/epic-25-modelos-llm/`). Commit local pendente de push (@devops).
 - Epic 23/24 (Score de engajamento, Mix editorial) — não iniciados
 - Limpeza de clientes de teste acumulados no banco de produção
 

@@ -1,0 +1,41 @@
+schema: 1
+story: '25.1'
+story_title: 'Atualizar model IDs de Sonnet 4.6 para Sonnet 5 no backend'
+gate: PASS
+status_reason: 'Troca mecânica de string de configuração em 5 arquivos, sem lógica nova. Grep confirma zero ocorrências residuais de claude-sonnet-4-6 em backend/app e zero referências ao ID antigo em backend/tests. Suíte completa (398 testes) passou sem novas falhas, mesmo baseline registrado antes desta story.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-26T00:00:00-03:00'
+
+top_issues: []
+
+waiver: { active: false }
+
+quality_score: 100
+expires: '2026-08-09T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 398
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Troca de string de configuração, sem superfície de ataque nova.'
+  performance:
+    status: PASS
+    notes: 'Sem impacto de performance — mesmo tier de modelo (Sonnet), só versão do ID atualizada.'
+  reliability:
+    status: PASS
+    notes: 'pytest: 398 passed, 0 failed, 5 warnings pré-existentes (deprecation datetime.utcnow(), não relacionado a esta story).'
+  maintainability:
+    status: PASS
+    notes: 'Comentário explicativo em scout.py preservado. Escopo IN/OUT da story documenta explicitamente por que theme_generator.py, analyst.py e scout.py::VISION_MODEL não foram tocados (já usam Haiku 4.5 vigente).'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Se o roteamento de modelo por agente for revisitado no futuro (ex: avaliar Opus 4.8 para Scout), tratar como decisão de @architect, não como extensão desta story mecânica.'
+      refs: ['docs/stories/epic-25-modelos-llm/epic-25-overview.md']
