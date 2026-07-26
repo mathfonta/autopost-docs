@@ -1,0 +1,52 @@
+schema: 1
+story: '19.4'
+story_title: 'Frontend — botão "Agendar" na aprovação com horário sugerido editável'
+gate: PASS
+status_reason: 'Todos os 7 ACs confirmados por leitura direta do código. Rastreei com atenção especial a cadeia de fuso horário (datetime-local → Date local → toISOString UTC → backend timezone.utc → comparação no Beat) por ser o risco explicitamente listado no Architecture Review do epic — está correta em todos os pontos, incluindo o round-trip nextOccurrence/toDatetimeLocalValue. Dois achados corrigidos de passagem pelo @dev (StatusBadge exaustivo quebrando o build, e o FUTURE-001 do gate 19.1) são exemplos de atenção a efeitos colaterais, não problemas novos. typecheck + build limpos, regressão backend 392/392 (schema tocado).'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-26T00:00:00-03:00'
+
+top_issues:
+  - id: 'MANUAL-001'
+    severity: low
+    finding: 'O fluxo completo (abrir modal, ver sugestão carregar, editar horário, confirmar) nunca foi visto rodando em navegador real — só validado por tsc/build. Categoria de risco baixa (UI client-side, sem integração externa nova, mesma classe de risco já aceita nas Stories 6.3 e 22.5).'
+    suggested_action: 'Conferir visualmente antes do beta test — abrir um post em awaiting_approval, clicar Agendar, confirmar que a sugestão aparece e que o datetime-local abre corretamente no formato esperado pelo navegador/SO do usuário.'
+    suggested_owner: dev
+
+  - id: 'INFO-001'
+    severity: low
+    finding: 'Boa prática observada: os dois fixes de passagem (StatusBadge e scheduled_for no schema) foram necessários para o código sequer compilar/não mentir sobre tipos — não são scope creep, são consequências diretas de adicionar "scheduled" ao union type de status.'
+    suggested_action: 'Nenhuma — documentado corretamente no Dev Agent Record, decisão correta.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 95
+expires: '2026-08-09T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Nenhum dado sensível exposto; chamadas autenticadas via interceptor axios já existente. Sem inputs não sanitizados renderizados como HTML.'
+  performance:
+    status: PASS
+    notes: 'Uma chamada de API adicional (best-posting-time) ao abrir o modal — desprezível, e falha silenciosamente sem travar a UI.'
+  reliability:
+    status: PASS
+    notes: 'Cadeia de fuso horário verificada ponta a ponta e correta. Falha da sugestão de horário degrada graciosamente para o default de copy_result.suggested_time, sem quebrar o fluxo.'
+  maintainability:
+    status: PASS
+    notes: 'ScheduleModal segue o padrão visual já estabelecido (RejectModal). Sem dependência nova para o seletor de data/hora (input nativo), conforme Dev Notes recomendava.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Checagem visual do fluxo de agendamento antes do beta test (MANUAL-001)'
+      refs: ['frontend/components/dashboard/ScheduleModal.tsx']

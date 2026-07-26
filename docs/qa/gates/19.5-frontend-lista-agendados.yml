@@ -1,0 +1,50 @@
+schema: 1
+story: '19.5'
+story_title: 'Frontend — tela "Posts agendados" (listar, cancelar, reagendar)'
+gate: PASS
+status_reason: 'CONCERN-001 corrigido e verificado: no catch de erro de cancelar/reagendar, ScheduledPostsSection agora recarrega a lista e verifica se o item ainda está presente — se não estiver (já publicado pelo Beat), mostra mensagem específica e o item some da UI; se ainda estiver (erro transiente real), mantém "tente de novo". Solução melhor que a sugestão original do QA (distingue os dois casos em vez de só recarregar). Verificado por leitura direta do código. Descoberta de arquitetura excelente também presente: o @dev percebeu que filtrar/ordenar client-side pela listagem paginada existente (created_at desc) faria posts agendados sumirem silenciosamente da tela, e corrigiu na raiz estendendo o backend com um parâmetro status + ordenação condicional por scheduled_for. Todos os 7 ACs confirmados. typecheck/build limpos.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-07-26T01:00:00-03:00'
+
+top_issues:
+  - id: 'CONCERN-001'
+    severity: low
+    finding: 'RESOLVIDO — ScheduledPostsSection não tinha refresh periódico, deixando itens já publicados pelo Beat presos na UI com erro permanente ao tentar cancelar/reagendar. Corrigido em frontend/components/dashboard/ScheduledPostsSection.tsx: no catch de erro, recarrega a lista e verifica se o item ainda está presente, distinguindo "já publicado" (mensagem específica, item some) de erro transiente real (mensagem de retry). Verificado por leitura direta do código.'
+    suggested_action: 'Nenhuma — corrigido e verificado nesta sessão.'
+    suggested_owner: dev
+
+  - id: 'INFO-001'
+    severity: low
+    finding: 'Decisão de arquitetura (estender GET /content-requests com status + ordenação condicional) é sólida — evitou um bug real de "posts perdidos" que só apareceria com uso real ao longo do tempo, exatamente o tipo de problema difícil de pegar em teste manual rápido.'
+    suggested_action: 'Nenhuma — decisão correta, documentada.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 96
+expires: '2026-08-09T00:00:00-03:00'
+
+evidence:
+  tests_reviewed: 2
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Filtro de status validado contra enum antes de tocar o banco (422 se inválido) — sem risco de injeção. Caption renderizada via JSX (auto-escape do React).'
+  performance:
+    status: PASS
+    notes: 'Uma única query adicional (sem paginação pesada, volume esperado baixo por cliente). Sem polling adicionado — irônico, é justamente a causa do CONCERN-001.'
+  reliability:
+    status: PASS
+    notes: 'Com CONCERN-001 corrigido, itens já publicados pelo Beat se auto-corrigem na UI na primeira interação, com mensagem específica em vez de erro genérico permanente.'
+  maintainability:
+    status: PASS
+    notes: 'Reuso limpo do ScheduleModal (zero modificação) para o fluxo de reagendar. Extensão do endpoint de listagem é minimamente invasiva — parâmetro opcional, não quebra os 2 call sites existentes.'
+
+recommendations:
+  immediate: []
+  future: []
